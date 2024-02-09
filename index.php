@@ -806,6 +806,7 @@ function checkWallet() {
 			}
 			
 		}
+		 /* maybe refresh the products when a sale is found... */ 
 		if(typeof result.messages != 'undefined'){
 			for(var key in result.messages){
 				msgs += result.messages[key] +'<hr>';				
