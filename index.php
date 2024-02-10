@@ -106,6 +106,7 @@ table.txns,table.txns th, table.txns td {
 	<div>
 		<button id="show_settings">Settings</button>
 	</div>
+
 </div>
 
 <hr>
@@ -782,6 +783,27 @@ window.addEventListener('load', function() {
 });	
 
 
+function deIncProduct(pids){
+	pids.forEach(function (product_id, index, array) {
+		var product = products_array.find(x => x.id == product_id);
+		product.inventory = product.inventory - 1;		
+	});	
+
+}
+
+function deIncIAddress(pairs){
+	pairs.forEach(function (pair, index, array) {
+		var product = products_array.find(x => x.id == pair.product_id);
+		
+		var ia = product.iaddress.find(x => x.id == pair.i_address_id);
+		ia.ia_inventory = ia.ia_inventory - 1;
+
+		
+	});	
+	
+}
+
+
 
 /* check for new transactions */
 function checkWallet() {
@@ -806,13 +828,21 @@ function checkWallet() {
 			}
 			
 		}
-		 /* maybe refresh the products when a sale is found... */ 
 		if(typeof result.messages != 'undefined'){
 			for(var key in result.messages){
 				msgs += result.messages[key] +'<hr>';				
 			}
 			
 		}
+	
+		if(typeof result.actions.inv_pids != 'undefined'){
+			deIncProduct(result.actions.inv_pids);
+		}
+		if(typeof result.actions.inv_p_iids != 'undefined'){
+			deIncIAddress(result.actions.inv_p_iids);
+		}
+		main.innerHTML = '';
+		displayProducts(products_array);
 		if(msgs != ''){
 			transactions.querySelector("#transactions_list").innerHTML += msgs;
 			transactions.classList.remove("hidden");
