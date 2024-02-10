@@ -187,6 +187,7 @@ class Process extends App {
 				$tx['respond_amount'] =  $tx['amount'];
 				$tx['out_message'] = $transfer['out_message'];				
 				$tx['out_message_uuid'] = '';
+				$tx['crc32'] = '';
 				$tx['type'] = "refund";
 			} 
 			
