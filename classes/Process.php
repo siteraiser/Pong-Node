@@ -13,7 +13,7 @@ class Process extends App {
 		
 		
 		$this->processModel->setInstalledTime();
-		
+		$return_actions = [];
 		$messages = [];
 		$errors = [];
 		$unConfirmed = $this->processModel->unConfirmedTxs();
@@ -95,8 +95,12 @@ class Process extends App {
 						if($p_and_ia_ids !== false){
 							if($p_and_ia_ids['id_type'] == 'p'){
 								$this->webApiModel->submitProduct($this->productModel->getProductById($p_and_ia_ids['p']));	
+								$return_actions['inv_pids'][]=$p_and_ia_ids['p'];
 							}else{				
-								$this->webApiModel->submitIAddress($this->productModel->getIAddressById($p_and_ia_ids['ia']));
+								$ia = $this->productModel->getIAddressById($p_and_ia_ids['ia']);
+								$this->webApiModel->submitIAddress($ia);
+								$return_actions['inv_p_iids'][]=['product_id'=>$ia['product_id'],'i_address_id'=>$p_and_ia_ids['ia']];
+						
 							}
 						}
 					}else{
@@ -104,7 +108,7 @@ class Process extends App {
 						//It is an address submission possibly
 						//$entry
 						$this->processModel->addressSubmission($entry);
-						
+						//$messages[] = "Shipping Address Added.";
 					}
 				}
 			}
@@ -247,7 +251,7 @@ class Process extends App {
 
 
 		if(empty($errors)){
-			return ["success"=>true,"messages"=>$messages];
+			return ["success"=>true,"messages"=>$messages,"actions"=>$return_actions];
 		}else{	
 			return ["success"=>false,"errors"=>$errors];
 		}
