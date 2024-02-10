@@ -834,15 +834,17 @@ function checkWallet() {
 			}
 			
 		}
-	
-		if(typeof result.actions.inv_pids != 'undefined'){
-			deIncProduct(result.actions.inv_pids);
+		if(typeof result.actions != 'undefined'){
+			if(typeof result.actions.inv_pids != 'undefined'){
+				deIncProduct(result.actions.inv_pids);
+			}
+			if(typeof result.actions.inv_p_iids != 'undefined'){
+				deIncIAddress(result.actions.inv_p_iids);
+			}
+			main.innerHTML = '';
+			displayProducts(products_array);
 		}
-		if(typeof result.actions.inv_p_iids != 'undefined'){
-			deIncIAddress(result.actions.inv_p_iids);
-		}
-		main.innerHTML = '';
-		displayProducts(products_array);
+		
 		if(msgs != ''){
 			transactions.querySelector("#transactions_list").innerHTML += msgs;
 			transactions.classList.remove("hidden");
