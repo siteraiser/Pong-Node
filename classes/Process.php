@@ -40,7 +40,7 @@ class Process extends App {
 					
 					
 				}else{
-					//set the incoming to not processed and delete the response reccord. 			
+					//set the incoming to not processed, keep response record.			
 					$this->processModel->markIncAsNotProcessed($out_message['txid']);	
 					//$this->processModel->removeResponse($out_message['txid']);	
 				}
