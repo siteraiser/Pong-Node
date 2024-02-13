@@ -188,11 +188,12 @@ class deroApiModel extends App{
 			]
 		}';		
 	}
-
-	//Creates a transfer to respond to new sales (destination address). 
-	//If a smart contract is specified it can transfer that. 
-	//If a respond amount is specified it will send that.
-	//You have ~128 bytes for an out message (link or uuid etc).
+	
+	/*****************************************************************/
+	/* Transfers can transfer a SCID (not setup for that currently). */
+	/* 128 bytes max for the out message (link or uuid etc).         */
+	/* Amount should be at least .00001 dero or 1 deri.              */
+	/*****************************************************************/
 	function transfer($transfers=[]){	
 		$transfer_string='';
 		foreach($transfers as $transfer){
