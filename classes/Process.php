@@ -8,9 +8,14 @@ class Process extends App {
 		$this->loadModel("webApiModel");
 		$this->loadModel("productModel");
 		
-		//Retry all failed webapi calls...
+
+
+		//Retry all failed webapi calls.
 		$this->webApiModel->tryPending();
-		
+		//Try checkin if it is time.
+		if($this->processModel->nextCheckInTime()){
+			$this->webApiModel->checkIn();
+		}			
 		
 		$this->processModel->setInstalledTime();
 		$return_actions = [];
