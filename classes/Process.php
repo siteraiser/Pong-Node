@@ -40,7 +40,7 @@ class Process extends App {
 					
 					
 				}else{
-					//set the incoming to not processed, keep response record.			
+					//set the incoming to not processed, keep response record.
 					$this->processModel->markIncAsNotProcessed($out_message['txid']);	
 					//$this->processModel->removeResponse($out_message['txid']);	
 				}
@@ -107,8 +107,10 @@ class Process extends App {
 							
 						//It is an address submission possibly
 						//$entry
-						$this->processModel->addressSubmission($entry);
-						//$messages[] = "Shipping Address Added.";
+						$saved = $this->processModel->addressSubmission($entry);
+						if($saved !== false){
+							$messages[] = "Shipping address submitted by buyer.";
+						}
 					}
 				}
 			}
