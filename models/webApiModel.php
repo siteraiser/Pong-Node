@@ -335,4 +335,47 @@ class webApiModel extends App{
 
 	}	
 	
+	function checkIn(){
+	
+		$data = '{
+			"method": "checkIn"
+		}';
+
+		$json = json_decode($data,true);
+		$json = json_encode($json);
+
+		$ch = curl_init($this->api_url);
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS,$json);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [ 		
+			"Authorization: Basic " . base64_encode($this->user.':'.$this->id),
+			"Content-Type: application/json"
+		]);
+
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+		$output = curl_exec($ch);
+		
+		$error = $this->connectionErrors($ch);
+
+		curl_close($ch);
+		
+		
+		$jresult = json_decode($output);
+		if($output!='' && $jresult != ''){
+			
+			if($jresult->success != true && $error ==''){
+				$error = 'API Error';
+			}
+		}else{
+			$error = 'No Response';
+		}
+		$this->logRequest($this->api_url,$json,$error,'checkIn','');
+
+		return $output;
+
+	}	
+	
+	
+	
+	
 }
