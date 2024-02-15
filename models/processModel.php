@@ -14,6 +14,59 @@ class processModel extends App {
 	}
 	
 	
+	function nextCheckInTime(){
+		
+		$given = new DateTime();
+		$given->setTimezone(new DateTimeZone("UTC"));
+		$now_utc = $given->format("Y-m-d H:i:s");
+	
+	
+		$stmt=$this->pdo->prepare("SELECT value FROM settings WHERE (name = 'next_checkin_utc' AND value < ?)");
+		$stmt->execute([$now_utc]);		
+		if($stmt->rowCount()==0){
+			return false;
+		}
+		//past checkin time, save a new one and return the id for checkin api call
+		$given->modify('+5 minutes');
+		$next_checkin_utc = $given->format("Y-m-d H:i:s");
+		
+		
+		$query='UPDATE settings SET 
+			value=:value
+			WHERE name=:name';	
+		
+		$stmt=$this->pdo->prepare($query);
+		$stmt->execute(array(
+			':value'=>$next_checkin_utc,
+			':name'=>'next_checkin_utc'));				
+					
+		if($stmt->rowCount()==0){
+			return false;
+		}
+		
+		//see if registered, if not return false.
+		$stmt=$this->pdo->prepare("SELECT value FROM settings WHERE name = 'web_api_id' AND NOT(value IS NULL OR value = '')");
+		$stmt->execute([]);		
+		if($stmt->rowCount()==0){
+			return false;
+		}
+		
+		return true;
+
+	}	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	function saveAddress($txid,$id){
 		
 		$stmt=$this->pdo->prepare("SELECT id,ship_address FROM responses WHERE crc32 = ? AND (ship_address IS NULL OR ship_address = '')");
