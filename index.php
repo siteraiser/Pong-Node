@@ -837,12 +837,16 @@ function checkWallet() {
 		if(typeof result.actions != 'undefined'){
 			if(typeof result.actions.inv_pids != 'undefined'){
 				deIncProduct(result.actions.inv_pids);
+				
 			}
 			if(typeof result.actions.inv_p_iids != 'undefined'){
 				deIncIAddress(result.actions.inv_p_iids);
+				
 			}
-			main.innerHTML = '';
-			displayProducts(products_array);
+			if(result.actions.length > 0){
+				main.innerHTML = '';
+				displayProducts(products_array);
+			}
 		}
 		
 		if(msgs != ''){
