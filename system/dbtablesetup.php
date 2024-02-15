@@ -94,8 +94,12 @@ if($result !== false && $result->rowCount() > 0){
 	//save time installed
 	$given = new DateTime();
 	$given->setTimezone(new DateTimeZone("UTC"));
+	$startup_time = $given->format("Y-m-d H:i:s");
+	//set a checkin time in the future
+	$given->modify('+5 minutes');
+	$next_checkin_utc = $given->format("Y-m-d H:i:s");
 	$this->pdo->query("
-	INSERT INTO settings (name,value) VALUES('install_time_utc','{$given->format("Y-m-d H:i:s")}');
+	INSERT INTO settings (name,value) VALUES('install_time_utc','$startup_time');
 	
 	INSERT INTO settings (name,value) VALUES('dero_api_ip','127.0.0.1');
 	INSERT INTO settings (name,value) VALUES('dero_api_port','10103');	
@@ -106,6 +110,9 @@ if($result !== false && $result->rowCount() > 0){
 	INSERT INTO settings (name,value) VALUES('web_api_user','Dero User Name');
 	INSERT INTO settings (name,value) VALUES('web_api_wallet','Wallet Address');
 	INSERT INTO settings (name,value) VALUES('web_api_id','');
+	
+	INSERT INTO settings (name,value) VALUES('next_checkin_utc','$next_checkin_utc');
+	
 	");
 	
 }
