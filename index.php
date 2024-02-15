@@ -208,13 +208,14 @@ table.txns,table.txns th, table.txns td {
 <script>
 
 //manage the views
-
+var viewing_state = 'products';
 var show_products_button = document.getElementById("show_products");
 var show_records_button = document.getElementById("show_records");
 var show_settings_button = document.getElementById("show_settings");
 var products_header = document.getElementById("products_header");
 
 show_products_button.addEventListener("click", (event) => {
+	viewing_state = 'products';
 	show_products_button.classList.add("selected");	
 	show_records_button.classList.remove("selected");
 	show_settings_button.classList.remove("selected");
@@ -224,6 +225,7 @@ show_products_button.addEventListener("click", (event) => {
 })
 
 show_records_button.addEventListener("click", (event) => {
+	viewing_state = 'records';
 	show_records_button.classList.add("selected");
 	show_products_button.classList.remove("selected");
 	show_settings_button.classList.remove("selected");
@@ -233,7 +235,7 @@ show_records_button.addEventListener("click", (event) => {
 })
 
 show_settings_button.addEventListener("click", (event) => {
-
+	viewing_state = 'settings';
 	show_settings_button.classList.add("selected");
 	show_records_button.classList.remove("selected");
 	show_products_button.classList.remove("selected");
@@ -844,8 +846,10 @@ function checkWallet() {
 				
 			}
 			if(result.actions.length > 0){
-				main.innerHTML = '';
-				displayProducts(products_array);
+				if(viewing_state == 'products'){
+					main.innerHTML = '';				
+					displayProducts(products_array);
+				}
 			}
 		}
 		
