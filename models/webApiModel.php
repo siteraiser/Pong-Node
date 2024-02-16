@@ -174,7 +174,7 @@ class webApiModel extends App{
 		}else{
 			$error = 'No Response';
 		}
-		$this->logRequest($this->api_url,$json,$error,'register','');
+		//$this->logRequest($this->api_url,$json,$error,'register','');
 			//var_dump($jresult);
 		return false;
 
