@@ -17,7 +17,7 @@ CREATE TABLE products (
 	out_message_uuid tinyint(1) DEFAULT 0,
 	respond_amount int(25),
 	inventory int(25),
-	image varchar(50000),
+	image longblob,
 	image_hash varchar(16),
 	lastupdate timestamp DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY (id)
