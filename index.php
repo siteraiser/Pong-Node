@@ -209,6 +209,7 @@ table.txns,table.txns th, table.txns td {
 
 //manage the views
 var viewing_state = 'products';
+var menu = document.getElementById("menu");
 var show_products_button = document.getElementById("show_products");
 var show_records_button = document.getElementById("show_records");
 var show_settings_button = document.getElementById("show_settings");
@@ -216,9 +217,7 @@ var products_header = document.getElementById("products_header");
 
 show_products_button.addEventListener("click", (event) => {
 	viewing_state = 'products';
-	show_products_button.classList.add("selected");	
-	show_records_button.classList.remove("selected");
-	show_settings_button.classList.remove("selected");
+	selectButton(show_products_button);
 	main.innerHTML = '';	
 	products_header.classList.remove("hidden");
 	displayProducts(products_array);
@@ -226,9 +225,7 @@ show_products_button.addEventListener("click", (event) => {
 
 show_records_button.addEventListener("click", (event) => {
 	viewing_state = 'records';
-	show_records_button.classList.add("selected");
-	show_products_button.classList.remove("selected");
-	show_settings_button.classList.remove("selected");
+	selectButton(show_records_button);
 	main.innerHTML = '';
 	products_header.classList.add("hidden");
 	loadout();
@@ -236,14 +233,18 @@ show_records_button.addEventListener("click", (event) => {
 
 show_settings_button.addEventListener("click", (event) => {
 	viewing_state = 'settings';
-	show_settings_button.classList.add("selected");
-	show_records_button.classList.remove("selected");
-	show_products_button.classList.remove("selected");
+	selectButton(show_settings_button);
 	main.innerHTML = '';
 	products_header.classList.add("hidden");
 	settings('');
 })
 
+function selectButton(select_button){
+	menu.querySelectorAll("button").forEach(function (button) {
+		button.classList.remove("selected");
+	});
+	select_button.classList.add("selected");	
+}
 
 
 /*************************/
@@ -674,8 +675,11 @@ function editProduct(form) {
 	
 		var editform = new FormData(form);
 		var fileInput = form.querySelector('#img');
-		editform.append('image', fileInput.src);
-
+		var src = '';
+		if(fileInput.src != document.location){	
+			src = fileInput.src;
+		}
+		editform.append('image', src);
 	  try {
 		const response = await fetch("/editproduct.php", {
 		  method: "POST", // or 'PUT'
@@ -736,7 +740,7 @@ function editProducts(pid) {
 
 	edit_product_modal.querySelector("#pid").value = editing.id;
 	edit_product_modal.querySelector("#label").value = editing.label;
-	edit_product_modal.querySelector("#img").src = editing.image;
+	edit_product_modal.querySelector("#img").src = (editing.image == null ? '' : editing.image);
 	
 	edit_product_modal.querySelector("#edit_out_message").classList.remove("warning");
 	edit_product_modal.querySelector("#edit_out_message").value = editing.out_message;	
@@ -952,16 +956,17 @@ function resize(){
 		canvas.height = H;
 		ctx.drawImage(img, 0, 0); //draw image
 		
-		var to_width = 100;
-		var to_height = 100;
-		if(W>100 || H>100)
+		var to_width = 500;
+		var to_height = 500;
+		var max_dimension = 500;
+		if(W>max_dimension || H>max_dimension)
 		{
 			if(W > H){
-				let ratio = 100 / W; 
+				let ratio = max_dimension / W; 
 				to_height = H * ratio; 
 
 			}else{		
-				let ratio = 100 / H; 
+				let ratio = max_dimension / H; 
 				to_width = W * ratio; 
 			}	
 
