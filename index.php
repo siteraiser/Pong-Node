@@ -959,8 +959,8 @@ function resize(){
 		var to_width = 500;
 		var to_height = 500;
 		var max_dimension = 500;
-		if(W>max_dimension || H>max_dimension)
-		{
+	//	if(W>max_dimension || H>max_dimension){
+		
 			if(W > H){
 				let ratio = max_dimension / W; 
 				to_height = H * ratio; 
@@ -970,7 +970,7 @@ function resize(){
 				to_width = W * ratio; 
 			}	
 
-		}
+	//	}
 		  
 		  
 		//resize
