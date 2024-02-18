@@ -86,7 +86,51 @@ class deroApiModel extends App{
 	//Creates a new integrated address
 	//When used as a send to address it will display the in message and fill in the correct amounts as well as allowing a port to be defined 
 	function makeIntegratedAddress($d_port,$in_message,$ask_amount){
-		$data = '{
+		$data = [];
+		$data["jsonrpc"] = "2.0";
+		$data["id"] = "1";
+		$data["method"] = "MakeIntegratedAddress";
+		
+		
+		$payload_rpc = [];
+		$payload_rpc[] = 
+			(object)[
+			"name"=>"C",
+			"datatype"=>"S",
+			"value"=>$in_message
+			];
+		$payload_rpc[] = 
+			(object)[
+			"name"=>"D",
+			"datatype"=>"U",
+			"value"=>(int)$d_port
+			];
+		$payload_rpc[] = 
+			(object)[
+			"name"=>"N",
+			"datatype"=>"U",
+			"value"=>0
+			];
+		$payload_rpc[] = 
+			(object)[
+			"name"=>"V",
+			"datatype"=>"U",
+			"value"=>(int)$ask_amount
+			];
+			
+		$params = [];
+		$params["payload_rpc"] = $payload_rpc;
+		
+		
+		$data["params"] = (object)$params;
+		
+/*	echo '<pre>';
+		var_dump($data);
+		echo '</pre>';
+		
+		
+
+		$datao = '{
 			"jsonrpc": "2.0",
 			"id": "1",
 			"method": "MakeIntegratedAddress",
@@ -116,8 +160,14 @@ class deroApiModel extends App{
 			}
 		}';
 
-	$json = json_decode($data,true);
-	$json = json_encode($json);
+
+
+	$json = json_decode($datao,true);
+		echo '<pre>';
+		var_dump($json);
+		echo '</pre>';
+die();				*/
+	$json = json_encode($data);
 
 		$ch = curl_init("http://{$this->ip}:{$this->port}/json_rpc");
 		curl_setopt($ch, CURLOPT_POST, true);
@@ -171,24 +221,24 @@ class deroApiModel extends App{
 		return $output;
 
 	}
-	
-	function createTransferObjectString($transfer){	
-		return '
-		{
-			"scid": "'.$transfer->scid.'",
-			"destination": "'.$transfer->address.'",
-			"amount": '.$transfer->respond_amount.',
-			"payload_rpc":
-			[
-				{
-				"name": "C",
-				"datatype": "S",
-				"value": "'.$transfer->out_message.'"
-				}
-			]
-		}';		
+
+
+	function createTransferObject($transfer){	
+		$t = [];
+		$t["scid"] = $transfer->scid;
+		$t["destination"] = $transfer->address;
+		$t["amount"] = (int)$transfer->respond_amount;
+
+		$payload_rpc = [];
+		$payload_rpc[] = 
+			(object)[
+			"name"=>"C",
+			"datatype"=>"S",
+			"value"=>$transfer->out_message
+			];
+		$t["payload_rpc"] = $payload_rpc;
+		return $t;		
 	}
-	
 	/*********************************************************************/
 	/* Creates a transfer to respond to new sales (destination address). */ 
 	/* Transfers can transfer a SCID (not setup for that currently).     */
@@ -196,27 +246,25 @@ class deroApiModel extends App{
 	/* Amount should be at least .00001 dero or 1 deri.                  */
 	/*********************************************************************/
 	function transfer($transfers=[]){	
-		$transfer_string='';
-		foreach($transfers as $transfer){
-			$transfer_string .= $this->createTransferObjectString($transfer).",";
-		}
-		$transfer_string = rtrim($transfer_string, ",");
-		
-		$data = '{
-		"jsonrpc": "2.0",
-		"id": "1",
-		"method": "transfer",
-		"params": {
-		   "ringsize": 16,
-		   "transfers":
-		   [
-			'.$transfer_string.'
-		  ]
-		}
-	  }';
 
-	$json = json_decode($data,true);
-	$json = json_encode($json);
+		$transfers_array = [];
+		foreach($transfers as $transfer){
+			$transfers_array[] = (object)$this->createTransferObject($transfer);
+		}
+
+		$data = [];
+		$data["jsonrpc"] = "2.0";
+		$data["id"] = "1";
+		$data["method"] = "transfer";
+		
+		$params = [];
+		$params["ringsize"] = 16;
+		$params["transfers"] = $transfers_array;
+		
+		$data["params"] = (object)$params;
+	
+
+	$json = json_encode($data);
 
 		$ch = curl_init("http://{$this->ip}:{$this->port}/json_rpc");
 		curl_setopt($ch, CURLOPT_POST, true);
