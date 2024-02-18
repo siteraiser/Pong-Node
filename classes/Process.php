@@ -21,33 +21,54 @@ class Process extends App {
 		$return_actions = [];
 		$messages = [];
 		$errors = [];
+		
+		
+		
+		$given = new DateTime();
+		$given->setTimezone(new DateTimeZone("UTC"));	
+		$given->modify('-36 seconds');//Ensure that one block has passed...
+		$time_utc = $given->format("Y-m-d H:i:s");
+			
 		$unConfirmed = $this->processModel->unConfirmedTxs();
 
 		$confirmed_txns=[];
 		//go through the resposes that haven't been confirmed.
-		foreach($unConfirmed as $out_message){
+		//maybe keep old txids in a csv and check if any of those have confirmed, if so update the txid with that one... (for adding scids)
+		foreach($unConfirmed as $response){
 			//make sure the response is at least one block old before checking.
-			$given = new DateTime();
-			$given->setTimezone(new DateTimeZone("UTC"));	
-			$given->modify('-36 seconds');//Ensure that one block has passed...
-			$time_utc = $given->format("Y-m-d H:i:s");
+		
 			
-			if($out_message['time_utc'] < $time_utc){
-				$check_transaction_result = $this->deroApiModel->getTransferByTXID($out_message['txid']);
-				$check_transaction_result = json_decode($check_transaction_result);
-
-				//succesfully confirmed 
-				if(!isset($check_transaction_result->errors) && isset($check_transaction_result->result)){		
-					$this->processModel->markResAsConfirmed($out_message['txid']);	
-					$confirmed_txns[] = $out_message['txid'];
+			if($response['time_utc'] < $time_utc){
+				$confirmed = false;
+				$alltxids=[];
+				$alltxids= explode(",",$response['txids']);
+				
+				foreach($alltxids as $rtxid){
+					if(!$confirmed){
+						$check_transaction_result = $this->deroApiModel->getTransferByTXID($rtxid);
+						$check_transaction_result = json_decode($check_transaction_result);
 					
-					//$messages[] = $out_message['type']." confirmed with txid:".$out_message['txid'];	
-					
-					
-				}else{
+						
+						//succesfully confirmed 
+						if(!isset($check_transaction_result->errors) && isset($check_transaction_result->result)){		
+							$confirmed = true;
+							$this->processModel->markResAsConfirmed($response['txid']);	
+							
+							if($response['txid'] == $rtxid){
+								//Same txid, good to go!
+								$confirmed_txns[] = $response['txid'];
+							}else{									
+								//Update the txid to the first one that confirmed. (allow later ones to fail and not be retried for scids)
+								$this->processModel->updateResponseTXID($response['txid'],$rtxid);								
+								$confirmed_txns[] = $rtxid;
+							}							
+						}
+					}
+				}
+				
+				if(!$confirmed){
 					//set the incoming to not processed, keep response record.
-					$this->processModel->markIncAsNotProcessed($out_message['txid']);	
-					//$this->processModel->removeResponse($out_message['txid']);	
+					$this->processModel->markIncAsNotProcessed($response['txid']);	
 				}
 			}
 		}
@@ -56,7 +77,7 @@ class Process extends App {
 			$confirmed_incoming = $this->processModel->getConfirmedInc($txid);
 
 			foreach($confirmed_incoming as $record){
-				$messages[] = $record['type']." confirmed with txid:".$record['txid'];	
+				$messages[] = $record['type']." confirmed for order txid:".$record['txid'];	
 				
 				//send post message to your web api here... 
 				if($record['out_message_uuid'] == 1 && $record['type'] == 'sale'){
