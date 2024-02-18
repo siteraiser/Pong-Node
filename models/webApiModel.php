@@ -347,7 +347,8 @@ class webApiModel extends App{
 		$json = json_encode($json);
 
 		$ch = curl_init($this->api_url);
-		curl_setopt($ch, CURLOPT_POST, true);
+		
+		curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
 		curl_setopt($ch, CURLOPT_POSTFIELDS,$json);
 		curl_setopt($ch, CURLOPT_HTTPHEADER, [ 		
 			"Authorization: Basic " . base64_encode($this->user.':'.$this->id),
@@ -361,17 +362,7 @@ class webApiModel extends App{
 
 		curl_close($ch);
 		
-		
-		$jresult = json_decode($output);
-		if($output!='' && $jresult != ''){
-			
-			if($jresult->success != true && $error ==''){
-				$error = 'API Error';
-			}
-		}else{
-			$error = 'No Response';
-		}
-		$this->logRequest($this->api_url,$json,$error,'checkIn','');
+		//$this->logRequest($this->api_url,$json,$error,'checkIn','');
 
 		return $output;
 
