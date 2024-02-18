@@ -291,7 +291,7 @@ class webApiModel extends App{
 		
 		$data = [];	
 		$data["method"] = "submitIAddress";
-		
+		//this is goofy... but tested lols
 		$params=[];
 		$params["id"] = $i_address['id'];
 		$params["product_id"] = $i_address['product_id'];
