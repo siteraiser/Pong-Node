@@ -355,16 +355,16 @@ class webApiModel extends App{
 			"Content-Type: application/json"
 		]);
 
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
-		$output = curl_exec($ch);
+	//	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+		curl_exec($ch);
 		
-		$error = $this->connectionErrors($ch);
+		//$error = $this->connectionErrors($ch);
 
 		curl_close($ch);
 		
 		//$this->logRequest($this->api_url,$json,$error,'checkIn','');
 
-		return $output;
+		return true;
 
 	}	
 	
