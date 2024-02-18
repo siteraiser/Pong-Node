@@ -273,7 +273,7 @@ class processModel extends App {
 	//check responses to ensure they went through, if not mark as not processed 
 	function unConfirmedTxs(){
 
-		$stmt=$this->pdo->prepare("SELECT DISTINCT txid,time_utc FROM responses WHERE confirmed = '0'");
+		$stmt=$this->pdo->prepare("SELECT DISTINCT txid,txids,time_utc FROM responses WHERE confirmed = '0'");
 		$stmt->execute([]);		
 		if($stmt->rowCount()==0){
 			return [];
@@ -293,6 +293,21 @@ class processModel extends App {
 		$stmt->execute(array(
 			':confirmed'=>1,
 			':txid'=>$txid));				
+					
+		if($stmt->rowCount()==0){
+			return false;
+		}
+	}
+	function updateResponseTXID($txid,$newTXID){
+
+		$query='UPDATE responses SET 
+			txid=:txid1
+			WHERE txid=:txid2';	
+		
+		$stmt=$this->pdo->prepare($query);
+		$stmt->execute(array(
+			':txid1'=>$newTXID,
+			':txid2'=>$txid));				
 					
 		if($stmt->rowCount()==0){
 			return false;
@@ -389,16 +404,34 @@ class processModel extends App {
 
 
 
+	function getRespsonseTXIDS($incoming_id){
+
+		$stmt=$this->pdo->prepare("SELECT txids FROM responses WHERE incoming_id = ?");
+		$stmt->execute([$incoming_id]);		
+		if($stmt->rowCount()==0){
+			return false;
+		}
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+		return $row['txids'];
+	}
 
 	function updateResponseTX($response){
-
+		//Add to list of txns
+		$responseTXIDS = $this->getRespsonseTXIDS($response->incoming_id);		
+		$responseTXIDS = explode(",",$responseTXIDS);		
+		$responseTXIDS[] = $response->txid;
+		$responseTXIDS = implode(",",$responseTXIDS);
+		
+		
 		$query='UPDATE responses SET 
-			txid=:txid
+			txid=:txid,
+			txids=:txids
 			WHERE incoming_id=:incoming_id';	
 		
 		$stmt=$this->pdo->prepare($query);
 		$stmt->execute(array(
 			':txid'=>$response->txid,
+			':txids'=>$responseTXIDS,
 			':incoming_id'=>$response->incoming_id));				
 					
 		if($stmt->rowCount()==0){
@@ -423,12 +456,14 @@ class processModel extends App {
 		$responseRecord = $this->checkForResponseById($response->incoming_id);
 		if($responseRecord !== false){
 			$this->updateResponseTX($response);
+			return true;
 		}
 		
 		//No record, insert one.
 		$query='INSERT INTO responses (
 			incoming_id,
 			txid,
+			txids,
 			type,
 			buyer_address,
 			out_amount,
@@ -439,11 +474,12 @@ class processModel extends App {
 			time_utc
 			)
 			VALUES
-			(?,?,?,?,?,?,?,?,?,?)
+			(?,?,?,?,?,?,?,?,?,?,?)
 			';	
 		
 		$array=array(
 			$response->incoming_id,
+			$response->txid,
 			$response->txid,
 			$response->type,
 			$response->buyer_address,
