@@ -57,6 +57,7 @@ CREATE TABLE responses (
 	id smallint(6) unsigned NOT NULL auto_increment,
 	incoming_id smallint(6) unsigned NOT NULL,
 	txid varchar(150) NULL,
+	txids varchar(2000) NULL,
 	type varchar(150) NULL,
 	buyer_address varchar(100) NULL,
 	out_amount int(25) unsigned,
