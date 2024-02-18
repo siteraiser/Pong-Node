@@ -675,8 +675,9 @@ function editProduct(form) {
 	
 		var editform = new FormData(form);
 		var fileInput = form.querySelector('#img');
+		console.log(fileInput.src);
 		var src = '';
-		if(fileInput.src != document.location){	
+		if(fileInput.src != document.location && fileInput.src != document.location + '#'){	
 			src = fileInput.src;
 		}
 		editform.append('image', src);
@@ -740,7 +741,10 @@ function editProducts(pid) {
 
 	edit_product_modal.querySelector("#pid").value = editing.id;
 	edit_product_modal.querySelector("#label").value = editing.label;
-	edit_product_modal.querySelector("#img").src = (editing.image == null ? '' : editing.image);
+	
+
+	
+	edit_product_modal.querySelector("#img").src = (editing.image == null ? '#' : editing.image);
 	
 	edit_product_modal.querySelector("#edit_out_message").classList.remove("warning");
 	edit_product_modal.querySelector("#edit_out_message").value = editing.out_message;	
