@@ -174,7 +174,7 @@ class webApiModel extends App{
 		}else{
 			$error = 'No Response';
 		}
-		//$this->logRequest($this->api_url,$json,$error,'register','');
+	//	$this->logRequest($this->api_url,$json,$error,'register','');
 			//var_dump($jresult);
 		return false;
 
@@ -225,7 +225,7 @@ class webApiModel extends App{
 
 	}
 	
-	
+/*
 	function createIAObjectString($i_address){	
 		return '
 		{
@@ -235,28 +235,29 @@ class webApiModel extends App{
 			"status": '.$i_address->status.'
 		}';		
 	}
+*/
+
+
 
 		//Sends to your website
 	function submitProduct($product,$new_image=true){
-		$image_insert ='';
+	
+			
+		$data = [];	
+		$data["method"] = "submitProduct";
+		
+		$params=[];
+		$params["id"] = $product['id'];
+		$params["label"] = $product['label'];
+		$params["inventory"] = $product['inventory'];
+		
 		if($new_image){
-			$image_insert =',"image" : "'.$product['image'].'"';
-		}
+			$params["image"] = $product['image'];
+		}		
 		
+		$data["params"] = (object)$params;
 		
-		
-		$data = '{
-			"method": "submitProduct",
-			"params": {
-				"id": "'.$product['id'].'",
-				"label": "'.$product['label'].'",	
-				"inventory": "'.$product['inventory'].'"
-				'.$image_insert.'
-			}
-		}';
-
-		$json = json_decode($data,true);
-		$json = json_encode($json);
+		$json = json_encode($data);
 
 		$ch = curl_init($this->api_url);
 		curl_setopt($ch, CURLOPT_POST, true);
@@ -288,21 +289,22 @@ class webApiModel extends App{
 	
 	function submitIAddress($i_address){
 		
-		$data = '{
-			"method": "submitIAddress",
-			"params": {
-				"id": "'.$i_address['id'].'",
-				"product_id": "'.$i_address['product_id'].'",
-				"iaddr": "'.$i_address['iaddr'].'",
-				"ask_amount": "'.$i_address['ask_amount'].'",
-				"comment": "'.$i_address['comment'].'",					
-				"status": "'.$i_address['status'].'",
-				"ia_inventory": "'.$i_address['ia_inventory'].'"				
-			}
-		}';
+		$data = [];	
+		$data["method"] = "submitIAddress";
+		
+		$params=[];
+		$params["id"] = $i_address['id'];
+		$params["product_id"] = $i_address['product_id'];
+		$params["iaddr"] = $i_address['iaddr'];
+		$params["ask_amount"] = $i_address['ask_amount'];
+		$params["comment"] = $i_address['comment'];		
+		$params["status"] = $i_address['status'];		
+		$params["ia_inventory"] = $i_address['ia_inventory'];				
+		
+		$data["params"] = (object)$params;
+		
 
-		$json = json_decode($data,true);
-		$json = json_encode($json);
+		$json = json_encode($data);
 
 		$ch = curl_init($this->api_url);
 		curl_setopt($ch, CURLOPT_POST, true);
