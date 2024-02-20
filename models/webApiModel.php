@@ -5,8 +5,9 @@ class webApiModel extends App{
 	public $user="";
 	public $wallet="";
 	public $id="";	
-	//public $scid="0000000000000000000000000000000000000000000000000000000000000000";
-	 public function __construct(){
+
+
+	public function __construct(){
          parent::__construct();
 
 		$stmt=$this->pdo->prepare("SELECT * FROM settings WHERE NOT(name = 'install_time_utc')");
@@ -24,7 +25,7 @@ class webApiModel extends App{
 		$this->user = $settings['web_api_user'];
 		$this->wallet = $settings['web_api_wallet'];
 		$this->id = $settings['web_api_id'];
-		//$this->wallet = $settings['wallet'];
+
 	}
 	
 	
@@ -38,7 +39,9 @@ class webApiModel extends App{
 		$stmt->execute(array());
 		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);		
 		foreach($rows as $row){
+			//Get rid of the old ones, if it fails then it will be added back.
 			$this->deleteRequests($row['method'],$row['aid']);
+			//retry the latest.
 			$this->retry($row);
 		}
 	}
@@ -77,7 +80,7 @@ class webApiModel extends App{
 		return $output;
 
 	}
-
+	
 	function deleteRequests($method,$applicable_id){
 		$stmt=$this->pdo->prepare("DELETE FROM pending WHERE method = ? AND aid=?");
 		$stmt->execute([$method,$applicable_id]);	
@@ -111,8 +114,8 @@ class webApiModel extends App{
 			}
 			return true;
 		}
-		$this->deleteRequests($method,$applicable_id);
-		
+		//If successful remove any older failed requests for same product or I.A.
+		$this->deleteRequests($method,$applicable_id);		
 		
 	}
 
@@ -174,17 +177,19 @@ class webApiModel extends App{
 		}else{
 			$error = 'No Response';
 		}
-	//	$this->logRequest($this->api_url,$json,$error,'register','');
-			//var_dump($jresult);
+
 		return false;
 
 	}
-/**/	
+
 	
 	
-	//Sends to your website
+	//Sends new transaction to a website when uuid is selected and the out_message contains the url (as of now...)
 	function newTX($tx){
 		$url = $tx['out_message'];
+		if(!filter_var($url, FILTER_VALIDATE_URL)){
+			return false;
+		}
 		$data = '{
 			"method": "newTX",
 			"params": {
@@ -225,21 +230,9 @@ class webApiModel extends App{
 
 	}
 	
-/*
-	function createIAObjectString($i_address){	
-		return '
-		{
-			"iaddr": "'.$i_address->iaddr.'",
-			"comment": "'.$i_address->comment.'",
-			"ask_amount": '.$i_address->ask_amount.',
-			"status": '.$i_address->status.'
-		}';		
-	}
-*/
 
 
-
-		//Sends to your website
+	//Sends a product to a website
 	function submitProduct($product,$new_image=true){
 	
 			
@@ -249,6 +242,8 @@ class webApiModel extends App{
 		$params=[];
 		$params["id"] = $product['id'];
 		$params["label"] = $product['label'];
+		$params["details"] = $product['details'];
+		$params["scid"] = $product['scid'];
 		$params["inventory"] = $product['inventory'];
 		
 		if($new_image){
@@ -297,12 +292,12 @@ class webApiModel extends App{
 		$params["product_id"] = $i_address['product_id'];
 		$params["iaddr"] = $i_address['iaddr'];
 		$params["ask_amount"] = $i_address['ask_amount'];
-		$params["comment"] = $i_address['comment'];		
+		$params["comment"] = $i_address['comment'];	
+		$params["ia_scid"] = $i_address['ia_scid'];		
 		$params["status"] = $i_address['status'];		
 		$params["ia_inventory"] = $i_address['ia_inventory'];				
 		
 		$data["params"] = (object)$params;
-		
 
 		$json = json_encode($data);
 
