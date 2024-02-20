@@ -9,11 +9,13 @@ class addProductModel extends App {
 			comment,
 			port,
 			product_id,
+			ia_scid,
+			ia_respond_amount,
 			ia_inventory,
 			status
 			)
 			VALUES
-			(?,?,?,?,?,?,?)';	
+			(?,?,?,?,?,?,?,?,?)';	
 		
 		$array=array(
 			$iaddr,
@@ -21,6 +23,8 @@ class addProductModel extends App {
 			$_POST['comment'],
 			$_POST['port'],
 			$product_id,
+			'',
+			0,
 			$_POST['inventory'] == '' ? 0 : $_POST['inventory'],
 			1
 			);				
@@ -68,18 +72,22 @@ class addProductModel extends App {
 
 		$query='INSERT INTO products (
 			label,
+			details,
 			out_message,
 			out_message_uuid,
+			scid,
 			respond_amount,
 			inventory
 			)
 			VALUES
-			(?,?,?,?,?)';	
+			(?,?,?,?,?,?,?)';	
 		
 		$array=array(
 			$_POST['label'],
+			$_POST['details'],
 			$_POST['out_message'],
 			isset($_POST['out_message_uuid']) ? 1 : 0,
+			$_POST['scid'],
 			($_POST['respond_amount']=='' || $_POST['respond_amount'] < 1 ? 1 :$_POST['respond_amount']),
 			0
 			);				
