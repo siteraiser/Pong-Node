@@ -17,7 +17,7 @@ class loadoutModel extends App {
 
 	function getTransactionList(){
 		$stmt=$this->pdo->prepare("
-		SELECT i.*, ia.* , res.*, p.*
+		SELECT i.*, ia.* , res.*, p.*, res.out_message AS res_out_message
 		FROM incoming as i 
 		LEFT JOIN products as p 
 		ON (i.for_product_id = p.id)
@@ -25,7 +25,7 @@ class loadoutModel extends App {
 		ON (i.amount = ia.ask_amount AND i.port = ia.port AND p.id = ia.product_id)
 		INNER JOIN responses as res 
 		ON (i.id = res.incoming_id) 
-		WHERE res.type = 'sale'
+		WHERE res.type = 'sale' OR res.type = 'sc_sale'
 		");
 		$stmt->execute(array());
 		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
