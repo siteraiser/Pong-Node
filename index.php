@@ -414,7 +414,7 @@ function createTable(table_data) {
 		td +='<td>'+ val.comment + '</td>';
 		td +='<td>'+ val.amount + ' (' + niceRound( val.amount * .00001) + ' Dero)' + '</td>';
 		td +='<td>'+  val.res_out_message + '</td>';
-		td +='<td>'+ val.out_amount + ' (' + niceRound( val.out_amount * .00001) + ' Dero)' + '</td>';		
+		td +='<td>'+ val.out_amount + ' (' + niceRound( val.out_amount * .00001) + (val.type == 'sc_sale'? ' Token': ' Dero') + ')</td>';		
 		td +='<td>'+ val.buyer_address + '</td>';
 		td +='<td style="white-space:pre">'+ val.ship_address + '</td>';
 		td +='<td>'+ val.txid + '</td>';
