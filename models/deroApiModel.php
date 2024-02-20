@@ -6,7 +6,6 @@ class deroApiModel extends App{
 	public $port;
 	public $user;
 	public $pass;
-	//public $scid="0000000000000000000000000000000000000000000000000000000000000000";
 
 	public function __construct(){
         parent::__construct();
@@ -45,6 +44,41 @@ class deroApiModel extends App{
 
 
 	//API funtions
+
+
+
+
+	//Gets the list of incoming transfers
+	function getAddress(){
+
+	$data = '{
+    "jsonrpc": "2.0",
+    "id": "1",
+    "method": "GetAddress"
+	}';
+
+	$json = json_decode($data,true);
+	$json = json_encode($json);
+
+		$ch = curl_init("http://{$this->ip}:{$this->port}/json_rpc");
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS,$json);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [ 		
+			"Authorization: Basic " . base64_encode($this->user.':'.$this->pass),
+			"Content-Type: application/json"
+		]);
+
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+		$output = curl_exec($ch);
+		
+		$this->connectionErrors($ch);
+
+		curl_close($ch);
+
+		return $output;
+
+	}
+
 
 	//Gets the list of incoming transfers
 	function getTransferByTXID($transaction_id){
@@ -124,50 +158,8 @@ class deroApiModel extends App{
 		
 		$data["params"] = (object)$params;
 		
-/*	echo '<pre>';
-		var_dump($data);
-		echo '</pre>';
-		
-		
 
-		$datao = '{
-			"jsonrpc": "2.0",
-			"id": "1",
-			"method": "MakeIntegratedAddress",
-			"params": {
-			  "payload_rpc": [
-				{
-				  "name": "C",
-				  "datatype": "S",
-				  "value": "'.$in_message.'"
-				},
-				{
-				  "name": "D",
-				  "datatype": "U",
-				  "value": '.$d_port.'
-				},
-				{
-				  "name": "N",
-				  "datatype": "U",
-				  "value": 0
-				},
-				{
-				  "name": "V",
-				  "datatype": "U",
-				  "value": '.$ask_amount.'
-				}
-			  ]
-			}
-		}';
-
-
-
-	$json = json_decode($datao,true);
-		echo '<pre>';
-		var_dump($json);
-		echo '</pre>';
-die();				*/
-	$json = json_encode($data);
+		$json = json_encode($data);
 
 		$ch = curl_init("http://{$this->ip}:{$this->port}/json_rpc");
 		curl_setopt($ch, CURLOPT_POST, true);
@@ -246,7 +238,7 @@ die();				*/
 	/* Amount should be at least .00001 dero or 1 deri.                  */
 	/*********************************************************************/
 	function transfer($transfers=[]){	
-
+	
 		$transfers_array = [];
 		foreach($transfers as $transfer){
 			$transfers_array[] = (object)$this->createTransferObject($transfer);
