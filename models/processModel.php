@@ -345,7 +345,7 @@ class processModel extends App {
 	function getConfirmedInc($txid){
 
 		$stmt=$this->pdo->prepare("
-		SELECT *, responses.out_message AS response_out_message FROM responses 
+		SELECT *, i_addresses.id AS ia_id, responses.out_message AS response_out_message FROM responses 
 		INNER JOIN incoming ON responses.incoming_id = incoming.id 
 		RIGHT JOIN i_addresses ON incoming.amount = i_addresses.ask_amount 
 		RIGHT JOIN products ON i_addresses.product_id = products.id 
@@ -373,11 +373,12 @@ class processModel extends App {
 	}
 
 		
-	function getIAsettings($tx){
+	function getIAsettings($tx,$addon=''){
 
 		$stmt=$this->pdo->prepare("
-		SELECT *, i_addresses.comment AS ia_comment FROM i_addresses 
-		INNER JOIN products ON i_addresses.product_id = products.id  WHERE i_addresses.ask_amount = ? AND i_addresses.port = ? AND i_addresses.status = '1'");
+		SELECT *, i_addresses.comment AS ia_comment,i_addresses.id AS ia_id FROM i_addresses 
+		INNER JOIN products ON i_addresses.product_id = products.id  
+		WHERE i_addresses.ask_amount = ? AND i_addresses.port = ? AND i_addresses.status = '1' $addon");
 		$stmt->execute([$tx['amount'],$tx['port']]);		
 		if($stmt->rowCount()==0){
 			return false;
@@ -470,11 +471,12 @@ class processModel extends App {
 			port,
 			out_message,
 			out_message_uuid,
+			out_scid,
 			crc32,
 			time_utc
 			)
 			VALUES
-			(?,?,?,?,?,?,?,?,?,?,?)
+			(?,?,?,?,?,?,?,?,?,?,?,?)
 			';	
 		
 		$array=array(
@@ -487,6 +489,7 @@ class processModel extends App {
 			$response->port,
 			$response->out_message,
 			$response->out_message_uuid,
+			$response->out_scid,
 			$response->crc32,
 			$response->time_utc
 			);				
