@@ -62,6 +62,7 @@
 
 .modal, #main > div, #messages,#main > div, #transactions{
 	 overflow-wrap: break-word;
+	 line-height: 1.7em;
 }
 #messages,#transactions{
 	z-index:2;
@@ -87,6 +88,27 @@ table.txns,table.txns th, table.txns td {
 }
 
 
+span.info{
+	position:relative;
+	cursor: pointer;
+	width: 16px;
+	height: 16px;
+	display: inline-flex; 
+	justify-content: center;
+	align-items: center;
+	background: #ddd;
+	border-radius: 50%;
+}
+div.tip{
+	position:absolute;
+	bottom:20px;
+	width:140px;
+	background:#ddd;
+	padding:3px;
+	max-height:120px;
+	overflow-y:auto;
+	 line-height: 1.3em;
+}
 
 </style>
 </head>
@@ -140,18 +162,24 @@ table.txns,table.txns th, table.txns td {
 		<label>Product Label
 			<input id="label" name="label" type="text" >
 		</label>
+		<label>Product Details
+			<textarea id="details" name="details" type="text" ></textarea>
+		</label>
 		<label>Comment
 			<input id="comment" name="comment" type="text" >
 		</label>
 		<label>Out Message (max 128b)
-			<input id="out_message" name="out_message" type="text" maxlength="128">
+			<input id="out_message" name="out_message" type="text" maxlength="128"> <span class="info out_message_info">i</span>
 		</label>
-		Only Use UUID <input id="add_out_message_uuid" name="out_message_uuid" type="checkbox" >
+		Only Use UUID <input id="add_out_message_uuid" name="out_message_uuid" type="checkbox" > <span class="info out_message_uuid_info">i</span>
 		<label>Ask Amount (atomic units)
-			<input id="ask_amount" class="atomic_units" name="ask_amount" type="text" ><span class="dero_units"></span>
+			<input id="ask_amount" class="atomic_units dero" name="ask_amount" type="text" ><span class="token_units"></span>
+		</label>
+		<label>SCID 
+			<input id="scid" name="scid" type="text" > <span class="info scid_info">i</span>
 		</label>
 		<label>Respond Amount (atomic units)
-			<input id="respond_amount" class="atomic_units" name="respond_amount" type="text" ><span class="dero_units"></span>
+			<input id="respond_amount" class="atomic_units" name="respond_amount" type="text" ><span class="token_units"></span>
 		</label>
 		<label>Port
 			<input id="port" name="port" type="text" >
@@ -172,6 +200,9 @@ table.txns,table.txns th, table.txns td {
 		<label>Product Label
 			<input id="label" name="label" type="text" >
 		</label>
+		<label>Product Details
+			<textarea id="details" name="details" type="text" ></textarea>
+		</label>
 		<label>Image
 			<input type='file' />
 			<br><img id="img" name="img" style="max-height:100px;" src="#">
@@ -180,15 +211,19 @@ table.txns,table.txns th, table.txns td {
 			<input id="comment" name="comment" type="text" >
 		</label>
 		<label>Out Message (max 128b)
-			<input id="edit_out_message" name="out_message" type="text" maxlength="128">
+			<input id="edit_out_message" name="out_message" type="text" maxlength="128"> <span class="info out_message_info">i</span>
 		</label>
-		Only Use UUID <input id="out_message_uuid" name="out_message_uuid" type="checkbox" >
+		Only Use UUID <input id="out_message_uuid" name="out_message_uuid" type="checkbox" > <span class="info out_message_uuid_info">i</span>
 		
 		<label>Ask Amount (atomic units)
-			<input id="ask_amount" class="atomic_units" name="ask_amount" type="text" ><span class="dero_units"></span>
+			<input id="ask_amount" class="atomic_units dero" name="ask_amount" type="text" ><span class="token_units"></span>
 		</label>
-		<label>Respond Amount (atomic units)
-			<input id="respond_amount"class="atomic_units" name="respond_amount" type="text" ><span class="dero_units"></span>
+		
+		<label>SCID 
+			<input id="edit_scid" name="scid" type="text" > <span class="info scid_info">i</span>
+		</label>
+		<label>Respond Amount (atomic units, Dero if not a smart contract)
+			<input id="respond_amount"class="atomic_units" name="respond_amount" type="text" ><span class="token_units"></span>
 		</label>
 		<label>Port
 			<input id="port" name="port" type="text" >
@@ -378,7 +413,7 @@ function createTable(table_data) {
 		td +='<td>'+ val.label + '</td>';
 		td +='<td>'+ val.comment + '</td>';
 		td +='<td>'+ val.amount + ' (' + niceRound( val.amount * .00001) + ' Dero)' + '</td>';
-		td +='<td>'+ val.out_message + '</td>';
+		td +='<td>'+  val.res_out_message + '</td>';
 		td +='<td>'+ val.out_amount + ' (' + niceRound( val.out_amount * .00001) + ' Dero)' + '</td>';		
 		td +='<td>'+ val.buyer_address + '</td>';
 		td +='<td style="white-space:pre">'+ val.ship_address + '</td>';
@@ -490,10 +525,14 @@ function niceRound(number){
 	return Math.round(number*100000000)/100000000;
 }
 function convert(input){	
-	var deri = input.value;
-	deri = deri * .00001;
-	deri =  niceRound(deri);
-	input.parentElement.querySelector('.dero_units').innerHTML = deri+ " Dero";
+	var unit_of_account = 'Token';
+	if(input.classList.contains("dero")){
+		unit_of_account = 'Dero';
+	}
+	var atunits = input.value;
+	atunits = atunits * .00001;
+	atunits =  niceRound(atunits);
+	input.nextElementSibling.innerHTML = atunits+ " "+unit_of_account;
 }
 function callConvert(){
 	convert(event.target);
@@ -503,6 +542,69 @@ input.addEventListener('input', callConvert, false);
 input.addEventListener('keyup', callConvert, false);
 input.addEventListener('blur', callConvert, false);		
 });	
+
+
+
+/**********************/
+/* Information / Help */
+/**********************/
+var showing_tip = false;
+function showInfo(event){
+	if(!showing_tip){		
+		let div = document.createElement('div');
+		
+		let message = '';
+		if(event.target.classList.contains('out_message_info')){
+			showing_tip = true;
+			
+			message = 'For durable goods use this field to specify an api url to send the uuid to. ';
+			let text = document.createTextNode(message);
+			div.appendChild(text);
+			let hr = document.createElement('hr');
+			div.appendChild(hr);
+			
+			message = 'For E-Products use this field for a link to reedeem the product. ';
+			text = document.createTextNode(message);
+			div.appendChild(text);
+			hr = document.createElement('hr');
+			div.appendChild(hr);
+			
+			message = 'For smart contracts leave blank to use the scid as the out message (or provide your own).';
+			text = document.createTextNode(message);
+			div.appendChild(text);
+			
+		}else if(event.target.classList.contains('out_message_uuid_info')){
+			showing_tip = true;
+			message = 'When selected it will generate a uuid and send it to the buyer and to the api link if provided in the "out message" (for durable goods).';
+			text = document.createTextNode(message);
+			div.appendChild(text);
+		}else if(event.target.classList.contains('scid_info')){
+			showing_tip = true;
+			message = 'SCIDs here will be inherited by all blank integrated addresses below. This can be left blank or overridden by supplying scids at the I.A. level.';
+			text = document.createTextNode(message);
+			div.appendChild(text);
+		}
+
+
+		
+		div.classList.add('tip');
+		event.target.appendChild(div);
+		return;
+	}
+	showing_tip = false;	
+	document.querySelectorAll(".tip").forEach(el => el.remove());
+}
+
+var infos = document.querySelectorAll('.info');
+infos.forEach((info) => {
+info.addEventListener('click', showInfo);
+});	
+
+
+
+
+
+
 
 /********************/
 /* Display Products */
@@ -538,8 +640,14 @@ function generateProduct(product) {
 	main.appendChild(button);
 	
 	div.appendChild(createSection("Label: " +product.label));
-	div.appendChild(createSection("Inventory: " +product.inventory));		
-	div.appendChild(createSection("Respond Amount: " + product.respond_amount + " - (" + niceRound( product.respond_amount * .00001) + " Dero) - Applies to all I. Addrs. for this product"));	
+	div.appendChild(createSection("Details: " +product.details));	
+	div.appendChild(createSection("Inventory: " +product.inventory));	
+	div.appendChild(createSection("SCID: " +product.scid));	
+	var unit_of_account = 'Dero';
+	if(product.scid !=''){
+		unit_of_account = 'Token';
+	}
+	div.appendChild(createSection("Respond Amount: " + product.respond_amount + " - (" + niceRound( product.respond_amount * .00001) + " "+unit_of_account+") - Applies to all I. Addrs. for this product"));	
 	div.appendChild(createSection("Out Message: " + (product.out_message_uuid ==1 ? "UUID - "+ product.out_message:product.out_message) + " - Applies to all I. Addrs. for this product"));
 
 
@@ -558,6 +666,17 @@ function generateProduct(product) {
 			status = "active";
 		}
 		iaddress.appendChild(createSection("Status: " + status));	
+		if(product.scid !='' || val.ia_scid!=''){
+			iaddress.appendChild(createSection("SCID: " + (val.ia_scid!=''?val.ia_scid:'inherited')));
+			let show_amount = 'inherited';
+			if(val.ia_respond_amount!=0){
+				show_amount = " - (" + niceRound( val.ia_respond_amount * .00001) + " Token)"
+			}		
+			iaddress.appendChild(createSection("SCID Respond Amount: " + show_amount));		
+		}
+		
+	
+		
 		iaddress.appendChild(createSection("Inventory: " + val.ia_inventory));	
 		iaddresses.appendChild(iaddress);
 		
@@ -741,7 +860,7 @@ function editProducts(pid) {
 
 	edit_product_modal.querySelector("#pid").value = editing.id;
 	edit_product_modal.querySelector("#label").value = editing.label;
-	
+	edit_product_modal.querySelector("#details").value = editing.details;	
 
 	
 	edit_product_modal.querySelector("#img").src = (editing.image == null ? '#' : editing.image);
@@ -749,7 +868,9 @@ function editProducts(pid) {
 	edit_product_modal.querySelector("#edit_out_message").classList.remove("warning");
 	edit_product_modal.querySelector("#edit_out_message").value = editing.out_message;	
 	edit_product_modal.querySelector("#out_message_uuid").checked = (editing.out_message_uuid == 1? true:false);	
-
+	
+	edit_product_modal.querySelector("#edit_scid").value = editing.scid;	
+	
 	edit_product_modal.querySelector("#respond_amount").value = editing.respond_amount;
 	convert(edit_product_modal.querySelector("#respond_amount"));
 	edit_product_modal.querySelector("#inventory").value = editing.inventory;	
@@ -776,6 +897,12 @@ function editProducts(pid) {
 		
 		edit_product_modal.querySelector("#integrated_addresses").innerHTML += checkbox+"<br>";
 		
+		let ia_scid_input = '<input id="ia_scid" name="ia_scid['+iadd.id+']" value="'+iadd.ia_scid+'" type="text" >';
+		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "SCID: "+ia_scid_input+"<br>";
+		
+		let ia_respond_amount_input = '<input id="ia_respond_amount" name="ia_respond_amount['+iadd.id+']" value="'+iadd.ia_respond_amount+'" type="text" oninput="convert(this)">';
+		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "SCID Respond Amount: "+ia_respond_amount_input+'<span class="token_units">('+ niceRound(iadd.ia_respond_amount * .00001)+' Token)</span><br>';
+		
 		let inv_input = '<input id="ia_inventory" name="ia_inventory['+iadd.id+']" value="'+iadd.ia_inventory+'" type="text" >';
 		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "Inventory: "+inv_input+"<hr>";
 		
@@ -796,7 +923,7 @@ window.addEventListener('load', function() {
 function deIncProduct(pids){
 	pids.forEach(function (product_id, index, array) {
 		var product = products_array.find(x => x.id == product_id);
-		product.inventory = product.inventory - 1;		
+		product.inventory = parseInt(product.inventory) - 1;		
 	});	
 
 }
@@ -806,7 +933,7 @@ function deIncIAddress(pairs){
 		var product = products_array.find(x => x.id == pair.product_id);
 		
 		var ia = product.iaddress.find(x => x.id == pair.i_address_id);
-		ia.ia_inventory = ia.ia_inventory - 1;
+		ia.ia_inventory = parseInt(ia.ia_inventory) - 1;
 
 		
 	});	
@@ -834,31 +961,24 @@ function checkWallet() {
 		let msgs = '';
 		if(typeof result.errors != 'undefined'){
 			for(var key in result.errors){
-				msgs += result.errors[key] +'<hr>';				
+				msgs += '<span style="color:red;">'+ result.errors[key] +'</span><hr>';				
 			}
 			
 		}
 		if(typeof result.messages != 'undefined'){
 			for(var key in result.messages){
-				msgs += result.messages[key] +'<hr>';				
+				msgs += '<span style="color:green;">'+ result.messages[key] +'</span><hr>';				
 			}
 			
 		}
-		if(typeof result.actions != 'undefined'){
-			if(typeof result.actions.inv_pids != 'undefined'){
-				deIncProduct(result.actions.inv_pids);
-				
+		if(typeof result.products != 'undefined'){
+			
+			products_array = result.products;
+			if(viewing_state == 'products'){
+				main.innerHTML = '';				
+				displayProducts(products_array);
 			}
-			if(typeof result.actions.inv_p_iids != 'undefined'){
-				deIncIAddress(result.actions.inv_p_iids);
-				
-			}
-			if(result.actions.length > 0){
-				if(viewing_state == 'products'){
-					main.innerHTML = '';				
-					displayProducts(products_array);
-				}
-			}
+			
 		}
 		
 		if(msgs != ''){
