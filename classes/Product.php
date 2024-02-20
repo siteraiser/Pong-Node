@@ -169,6 +169,16 @@ echo'</pre>';
 						$changes[] = true;
 					}
 					
+					//Smart Contract updates
+					if($this->editProductModel->setSCID($iaddr['id']) !== false){
+						$changes[] = true;
+					}
+					
+					//Smart Contract updates
+					if($this->editProductModel->setIARespondAmount($iaddr['id']) !== false){
+						//$changes[] = true;
+					}
+					
 					if(in_array(true,$changes)){
 						//update when changed
 						$this->webApiModel->submitIAddress($this->productModel->getIAddressById($iaddr['id']));
