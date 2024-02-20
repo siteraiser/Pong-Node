@@ -32,8 +32,38 @@ class editProductModel extends App {
 		}
 		return true;
 	}
-
-
+	function setSCID($id){	
+		
+		$query='UPDATE i_addresses SET 
+			ia_scid=:ia_scid
+			WHERE id=:id';	
+		
+		$stmt=$this->pdo->prepare($query);
+		$stmt->execute(array(
+			':ia_scid'=>$_POST['ia_scid'][$id],
+			':id'=>$id));				
+					
+		if($stmt->rowCount()==0){
+			return false;
+		}
+		return true;
+	}
+	function setIARespondAmount($id){	
+		
+		$query='UPDATE i_addresses SET 
+			ia_respond_amount=:ia_respond_amount
+			WHERE id=:id';	
+		
+		$stmt=$this->pdo->prepare($query);
+		$stmt->execute(array(
+			':ia_respond_amount'=>($_POST['ia_respond_amount'][$id] == '' ? 0 : $_POST['ia_respond_amount'][$id]),
+			':id'=>$id));				
+					
+		if($stmt->rowCount()==0){
+			return false;
+		}
+		return true;
+	}
 
 //more specific to editing...
 
@@ -60,11 +90,13 @@ class editProductModel extends App {
 			comment,
 			port,
 			product_id,
+			ia_scid,
+			ia_respond_amount,
 			ia_inventory,
 			status
 			)
 			VALUES
-			(?,?,?,?,?,?,?)';	
+			(?,?,?,?,?,?,?,?,?)';	
 		
 		$array=array(
 			$iaddr,
@@ -72,10 +104,12 @@ class editProductModel extends App {
 			$_POST['comment'],
 			$_POST['port'],
 			$product_id,
+			'',
+			0,
 			0,
 			1
 			);				
-				
+				//$_POST['ia_respond_amount'] == '' ? 0 : $_POST['ia_respond_amount'],
 		$stmt=$this->pdo->prepare($query);
 		$stmt->execute($array);		
 		if($stmt->rowCount()==0){
@@ -153,8 +187,10 @@ class editProductModel extends App {
 		
 		$query='UPDATE products SET 
 			label=:label,
+			details=:details,
 			out_message=:out_message,
 			out_message_uuid=:out_message_uuid,
+			scid=:scid,
 			respond_amount=:respond_amount,
 			inventory=:inventory,
 			image=:image,
@@ -164,9 +200,11 @@ class editProductModel extends App {
 		
 		$stmt=$this->pdo->prepare($query);
 		$stmt->execute(array(
-			':label'=>$_POST['label'],	
+			':label'=>$_POST['label'],
+			':details'=>$_POST['details'],				
 			':out_message'=>$_POST['out_message'],
-			':out_message_uuid'=>isset($_POST['out_message_uuid']) ? 1 : 0,			
+			':out_message_uuid'=>isset($_POST['out_message_uuid']) ? 1 : 0,		
+			':scid'=>$_POST['scid'],
 			':respond_amount'=>($_POST['respond_amount']=='' || $_POST['respond_amount'] < 1 ? 1 :$_POST['respond_amount']),
 			':inventory'=>$_POST['inventory'] == '' ? 0 : $_POST['inventory'],
 			':image'=>$_POST['image'],
