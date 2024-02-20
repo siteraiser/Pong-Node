@@ -493,16 +493,12 @@ class Process extends App {
 
 
 
-
-
-
-
 		if($product_changes){
 			$product_results = $this->productModel->getProductsList();
 			foreach ($product_results as &$product){
 				$product['iaddress'] = $this->productModel->getIAddresses($product['id']);		
 			}
-			return ["success"=>true,"messages"=>$messages,"products"=>$product_results];
+			return ["success"=>true,"messages"=>$messages,"errors"=>$errors,"products"=>$product_results];
 		}
 		return ["success"=>true,"messages"=>$messages,"errors"=>$errors];
 
