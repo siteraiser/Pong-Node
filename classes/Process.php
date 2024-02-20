@@ -18,26 +18,29 @@ class Process extends App {
 		}			
 		
 		$this->processModel->setInstalledTime();
-		$return_actions = [];
+		//Define arrays for returning to frond end.
+		$product_changes = false;
+		//$return_actions = [];
 		$messages = [];
 		$errors = [];
 		
 		
-		
+		/*******************************/
+		/** Check if pending response **/
+		/** transfers have confirmed  **/
+		/*******************************/
 		$given = new DateTime();
 		$given->setTimezone(new DateTimeZone("UTC"));	
 		$given->modify('-36 seconds');//Ensure that one block has passed...
 		$time_utc = $given->format("Y-m-d H:i:s");
-			
+		
 		$unConfirmed = $this->processModel->unConfirmedTxs();
 
 		$confirmed_txns=[];
-		//go through the resposes that haven't been confirmed.
-		//maybe keep old txids in a csv and check if any of those have confirmed, if so update the txid with that one... (for adding scids)
+		//go through the responses that haven't been confirmed.
+		//keep old txids in a csv and check if any of those have confirmed, if so update the txid with the first one that confirms... 
 		foreach($unConfirmed as $response){
 			//make sure the response is at least one block old before checking.
-		
-			
 			if($response['time_utc'] < $time_utc){
 				$confirmed = false;
 				$alltxids=[];
@@ -58,7 +61,7 @@ class Process extends App {
 								//Same txid, good to go!
 								$confirmed_txns[] = $response['txid'];
 							}else{									
-								//Update the txid to the first one that confirmed. (allow later ones to fail and not be retried for scids)
+								//Update the txid to the first one that confirmed. (allow later ones to fail and not be retried)
 								$this->processModel->updateResponseTXID($response['txid'],$rtxid);								
 								$confirmed_txns[] = $rtxid;
 							}							
@@ -74,33 +77,41 @@ class Process extends App {
 		}
 
 		foreach($confirmed_txns as $txid){
+			//Get record for freshly confirmed transfer with txid
 			$confirmed_incoming = $this->processModel->getConfirmedInc($txid);
 
 			foreach($confirmed_incoming as $record){
 				$messages[] = $record['type']." confirmed for order txid:".$record['txid'];	
 				
-				//send post message to your web api here... 
+				//send post message to web api here... 
 				if($record['out_message_uuid'] == 1 && $record['type'] == 'sale'){
 					
 					// uuid is in $record['response_out_message']
-					//will have to lookup the product...
 					// custom API Address is in  = $record['out_message'];	
-						/*echo'<pre>';
-						var_dump($record);
-						echo'</pre>';
-						*/ 
-						$res = $this->webApiModel->newTX($record);						
-				}				
+
+					$res = $this->webApiModel->newTX($record);						
+				}else if($record['type'] == 'sc_refund_not_enough_tokens'){
+					//Out of tokens refund confirmed... set i address to inactive
+					$this->loadModel('editProductModel');
+					$this->editProductModel->toggleIAddr($record['ia_id'],0);
+					//Send update through web api.
+					$ia = $this->productModel->getIAddressById($record['ia_id']);
+					$this->webApiModel->submitIAddress($ia);
+					
+					$product_changes = true;
+				}
+				
 			}
 		}
 
 
 
-
-
-
 		
-		//$notProcessed=[];
+		/******************************/
+		/** Check incoming transfers **/
+		/** for new sales            **/
+		/******************************/
+
 		//Get transfers and save them if they are new and later than the db creation time.	
 		$export_transfers_result = $this->deroApiModel->getTransfers();
 		$export_transfers_result = json_decode($export_transfers_result);
@@ -119,20 +130,20 @@ class Process extends App {
 						$p_and_ia_ids = $this->processModel->insertNewTransaction($tx); //and do inventory first...						
 						//check type of inventory update... product or iaddress
 						if($p_and_ia_ids !== false){
+							$product_changes = true;
+							//set chenges to true to reload the products
 							if($p_and_ia_ids['id_type'] == 'p'){
 								$this->webApiModel->submitProduct($this->productModel->getProductById($p_and_ia_ids['p']));	
-								$return_actions['inv_pids'][]=$p_and_ia_ids['p'];
+								//$return_actions['inv_pids'][]=$p_and_ia_ids['p'];
 							}else{				
 								$ia = $this->productModel->getIAddressById($p_and_ia_ids['ia']);
 								$this->webApiModel->submitIAddress($ia);
-								$return_actions['inv_p_iids'][]=['product_id'=>$ia['product_id'],'i_address_id'=>$p_and_ia_ids['ia']];
-						
+								//$return_actions['inv_p_iids'][]=['product_id'=>$ia['product_id'],'i_address_id'=>$p_and_ia_ids['ia']];					
 							}
 						}
 					}else{
 							
 						//It is an address submission possibly
-						//$entry
 						$saved = $this->processModel->addressSubmission($entry);
 						if($saved !== false){
 							$messages[] = "Shipping address submitted by buyer.";
@@ -143,23 +154,25 @@ class Process extends App {
 		}	
 			
 
-
+		//Make array of unprocessed transactions
 		$notProcessed=[];
 		$new=$this->processModel->unprocessedTxs();
 		if($new !== false){
 			$notProcessed = $new;
 		}
 
-
-		$type = '';	
-
+		/*************************/
+		/** Do regular products **/
+		/*************************/
 
 		$transfer_list = [];
 
 		foreach($notProcessed as &$tx){
 			
 			$settings = $this->processModel->getIAsettings($tx);
-			
+			if($settings['scid'] != '' || $settings['ia_scid'] != ''){
+				continue 1;
+			}
 			
 			$transfer=[];
 			$successful=false;
@@ -201,6 +214,7 @@ class Process extends App {
 				$tx['respond_amount'] = $transfer['respond_amount'];
 				$tx['out_message'] = $transfer['out_message'];
 				$tx['out_message_uuid'] = $settings['out_message_uuid'];
+				$tx['out_scid']=$transfer['scid'];
 				$tx['crc32'] = ($transfer['out_message'] == ''?1:crc32($transfer['out_message']));
 				$tx['type'] = "sale";
 				
@@ -218,21 +232,27 @@ class Process extends App {
 				//update unprocessed array
 				$tx['respond_amount'] =  $tx['amount'];
 				$tx['out_message'] = $transfer['out_message'];				
-				$tx['out_message_uuid'] = '';
+				$tx['out_message_uuid'] = '';				
+				$tx['out_scid']=$transfer['scid'];				
 				$tx['crc32'] = '';
 				$tx['type'] = "refund";
-			} 
+	
+				
+			}
+			
 			
 		}	
-
 		unset($tx);
 
 
-
+		/***************************************/
+		/** Combine Regular Product Transfers **/
+		/***************************************/
 		$responseTXID='';
-		/*die();
+		/* Does combined transfers, scid transfers may require separate transfers in case of refund required...
 		*/
 		if(!empty($transfer_list)){
+						
 			$payload_result = $this->deroApiModel->transfer($transfer_list);
 			$payload_result = json_decode($payload_result);
 
@@ -246,7 +266,16 @@ class Process extends App {
 
 		if(empty($errors) && $responseTXID !== ''){
 			foreach($notProcessed as $tx){
-				
+				//Not set, not a regular product...
+				if(! isset($tx['out_scid'])){
+					continue 1;
+					//if($tx['out_scid'] != '0000000000000000000000000000000000000000000000000000000000000000'){}
+						
+					
+				}
+				//Mark incoming transaction as processed. 
+				//In the next check cycle it can be set to unprocessed above if response is not confirmed, then it is reprocessed. 
+				//Inventory is done once when it is first inserted.				
 				$result = $this->processModel->markAsProcessed($tx['txid']);
 					
 				$given = new DateTime();
@@ -263,6 +292,7 @@ class Process extends App {
 					"port"=>$tx['port'],
 					"out_message"=>$tx['out_message'],
 					"out_message_uuid"=>$tx['out_message_uuid'],
+					"out_scid"=>$tx['out_scid'],
 					"crc32"=>$tx['crc32'],
 					"time_utc"=>$time_utc
 					];
@@ -278,11 +308,204 @@ class Process extends App {
 
 
 
-		if(empty($errors)){
-			return ["success"=>true,"messages"=>$messages,"actions"=>$return_actions];
-		}else{	
-			return ["success"=>false,"errors"=>$errors];
+		/*******************************/
+		/***  Do smart contracts as  ***/
+		/***  separate transfers     ***/
+		/*******************************/
+			
+			
+		foreach($notProcessed as &$tx){
+			$settings = $this->processModel->getIAsettings($tx);	
+			if($settings['scid'] == '' && $settings['ia_scid'] == ''){
+				continue 1;
+			}
+			$transfer=[];
+			$successful=false;
+			if($settings !== false){
+				if($tx['successful'] == 1){
+					$successful = true;
+				}				
+			}
+			
+			
+			if($successful){
+				//Is a smart contract token transfer...
+				
+				//Send Response to buyer
+				//See if use uuid is selected, generate one if so.
+				if($settings['out_message_uuid'] == 1){
+					$UUID = new UUID;
+					$settings['out_message'] = $UUID->v4();
+				}
+				
+				//Use original out message if not a uuid (usually a link or some text)...
+				$transfer['out_message'] = $settings['out_message'];	
+				
+
+				
+				//Use Integrated Address scid if defined.
+				$transfer['scid'] = $settings['scid'];
+				if($settings['ia_scid'] != ''){
+					$transfer['scid'] = $settings['ia_scid'];
+				}
+				
+			
+				
+				
+				
+				//Use scid as out message if message is null.
+				if($transfer['out_message'] == ''){
+					$transfer['out_message'] = $transfer['scid'];
+				}
+				
+				//Use Integrated Address respond amount if defined.
+				$transfer['respond_amount'] = $settings['respond_amount'];//
+				if($settings['ia_respond_amount'] !== '' && $settings['ia_respond_amount'] > 0){
+					$transfer['respond_amount'] = $settings['ia_respond_amount'];
+				}
+
+				$transfer['address'] = $tx['buyer_address'];	
+				
+		
+				
+				//Check for a pending response for this incoming tx
+				$pending_response = $this->processModel->checkForResponseById($tx['id']);
+				if($pending_response !==false){
+					//Found a previous repsonse, use that instead of a new one (in case of double response we want the same confirmation number for address submission)
+					$transfer['out_message'] = $pending_response['out_message'];
+					
+				}
+			
+				
+				$sc_transfer=(object)$transfer;
+				//update unprocessed array
+				$tx['ia_comment'] = $settings['ia_comment'];
+				$tx['respond_amount'] = $transfer['respond_amount'];
+				$tx['out_message'] = $transfer['out_message'];
+				$tx['out_message_uuid'] = $settings['out_message_uuid'];
+				$tx['out_scid']=$transfer['scid'];
+				$tx['crc32'] = ($transfer['out_message'] == ''?1:crc32($transfer['out_message']));
+				$tx['type'] = "sc_sale";
+			
+			
+			
+			}else{
+			
+				//No mathcing products / I. Addresses found
+				//Send Refund to buyer
+				
+				$transfer['respond_amount'] = $tx['amount'];
+				$transfer['address'] = $tx['buyer_address'];	
+				$transfer['out_message'] =  "Integrated Address for S.C. Inactive.";	
+				$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";
+				$sc_transfer=(object)$transfer;	
+				//update unprocessed array
+				$tx['respond_amount'] =  $tx['amount'];
+				$tx['out_message'] = $transfer['out_message'];				
+				$tx['out_message_uuid'] = '';
+				$tx['out_scid']=$transfer['scid'];
+				$tx['crc32'] = '';
+				$tx['type'] = "sc_refund";
+
+			
+			} 
+			
+			
+			$responseTXID='';
+			$payload_result = $this->deroApiModel->transfer([$sc_transfer]);
+			$payload_result = json_decode($payload_result);
+
+			if($payload_result != null && isset($payload_result->result)){
+				
+				$responseTXID = $payload_result->result->txid;
+				
+			}else{
+				//After confirmation set ia status to false if transfer fails... and update with api
+				/*$this->loadModel('editProductModel');
+				$this->editProductModel->toggleIAddr($settings['ia_id'],0);
+				//Send update through web api.
+				$ia = $this->productModel->getIAddressById($settings['ia_id']);
+				$this->webApiModel->submitIAddress($ia);
+				*/
+				
+				$errors[] = "SC Transfer Error";
+				
+				$transfer['respond_amount'] = $tx['amount'];
+				$transfer['address'] = $tx['buyer_address'];	
+				$transfer['out_message'] =  "Fresh Out of Those";	
+				$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";
+				$sc_transfer=(object)$transfer;	
+				//update unprocessed array
+				$tx['respond_amount'] =  $tx['amount'];
+				$tx['out_message'] = $transfer['out_message'];				
+				$tx['out_message_uuid'] = '';
+				$tx['out_scid']=$transfer['scid'];
+				$tx['crc32'] = '';
+				$tx['type'] = "sc_refund_not_enough_tokens";
+				
+				
+				$payload_result = $this->deroApiModel->transfer([$sc_transfer]);
+				$payload_result = json_decode($payload_result);
+
+				if($payload_result != null && $payload_result->result){
+					$responseTXID = $payload_result->result->txid;
+				}else{
+					$errors[] = "SC Refund Transfer Error";
+				}
+			}
+			
+			if($responseTXID !== ''){
+				$result = $this->processModel->markAsProcessed($tx['txid']);
+					
+				$given = new DateTime();
+				$given->setTimezone(new DateTimeZone("UTC"));	
+				$time_utc = $given->format("Y-m-d H:i:s");
+				
+
+				if($result !== false){
+					$response = (object)[
+					"incoming_id"=>$tx['id'],
+					"txid"=>$responseTXID,
+					"type"=>$tx['type'],
+					"buyer_address"=>$tx['buyer_address'],
+					"out_amount"=>$tx['respond_amount'],
+					"port"=>$tx['port'],
+					"out_message"=>$tx['out_message'],
+					"out_message_uuid"=>$tx['out_message_uuid'],
+					"out_scid"=>$tx['out_scid'],
+					"crc32"=>$tx['crc32'],
+					"time_utc"=>$time_utc
+					];
+					
+					
+				$this->processModel->saveResponse($response);
+					
+				$messages[] = "{$tx['type']} response initiated". ($tx['type'] == 'sc_sale' ? ' for "'.$tx['ia_comment'].'"' : '') . ".";
+			
+				}
+			
+			}
+			
 		}
+
+		unset($tx);
+
+
+
+
+
+
+
+
+		if($product_changes){
+			$product_results = $this->productModel->getProductsList();
+			foreach ($product_results as &$product){
+				$product['iaddress'] = $this->productModel->getIAddresses($product['id']);		
+			}
+			return ["success"=>true,"messages"=>$messages,"products"=>$product_results];
+		}
+		return ["success"=>true,"messages"=>$messages,"errors"=>$errors];
+
 	}
 }
 
