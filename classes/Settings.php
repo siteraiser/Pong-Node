@@ -17,7 +17,21 @@ class Settings extends App {
 				}
 			}
 		}else{
+			//Not posting anything			
 			$settings = $this->settingsModel->getSettings();
+			foreach($settings as &$setting){
+				//Get wallet address if it hasn't been changed yet.
+				if($setting['name']=='web_api_wallet' && $setting['value'] == 'Wallet Address'){
+					$this->loadModel('deroApiModel');
+					$result = $this->deroApiModel->getAddress();
+					$result = json_decode($result);
+					//Getting wallet...
+					if(!isset($result->errors) && isset($result->result)){	
+						$setting['value'] = $result->result->address;
+					}		
+				}
+			}
+			unset($setting);
 		}
 		return $settings;
 		
