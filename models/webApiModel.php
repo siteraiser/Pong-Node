@@ -241,6 +241,7 @@ class webApiModel extends App{
 		
 		$params=[];
 		$params["id"] = $product['id'];
+		$params["p_type"] = $product['p_type'];
 		$params["label"] = $product['label'];
 		$params["details"] = $product['details'];
 		$params["scid"] = $product['scid'];
