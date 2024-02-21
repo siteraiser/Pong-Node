@@ -585,6 +585,9 @@ input.addEventListener('blur', callConvert, false);
 var p_type = document.getElementById("p_type");
 var edit_p_type = document.getElementById("edit_p_type");
 
+p_type.value='general';
+//reset on page reload
+typeSelect('','general');
 //input[value="physical"] ~ input#scid{display:none;}
 p_type.addEventListener("change", typeSelect );
 
