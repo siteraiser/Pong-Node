@@ -91,6 +91,13 @@ table.txns,table.txns th, table.txns td {
 }
 
 
+#edit_product_modal input[name="comment"],
+#edit_product_modal input[name="ask_amount"],
+#edit_product_modal input[name="port"]{
+	border: 1px solid #0f0;
+}
+
+
 span.info{
 	position:relative;
 	cursor: pointer;
@@ -177,7 +184,7 @@ div.tip{
 			<textarea id="details" name="details" type="text" ></textarea>
 		</label>
 		<label>Comment
-			<input id="comment" name="comment" type="text" >
+			<input id="comment" name="comment" type="text" > <span class="info comment_info">i</span>
 		</label>
 		<label>Out Message (max 128b)
 			<input id="out_message" name="out_message" type="text" maxlength="128"> <span class="info out_message_info">i</span>
@@ -196,7 +203,7 @@ div.tip{
 			<input id="port" name="port" type="text" >
 		</label>
 		<label>Inventory
-			<input id="inventory" name="inventory" type="text" >
+			<input id="inventory" name="inventory" type="text" > <span class="info inventory_info">i</span>
 		</label>
 		<br>
 		<button role="button" id="add_product">Add Product</button>
@@ -228,7 +235,7 @@ div.tip{
 			<br><img id="img" name="img" style="max-height:100px;" src="#">
 		</label>				
 		<label>Comment
-			<input id="comment" name="comment" type="text" >
+			<input id="comment" name="comment" type="text" > <span class="info comment_info">i</span>
 		</label>
 		<label>Out Message (max 128b)
 			<input id="edit_out_message" name="out_message" type="text" maxlength="128"> <span class="info out_message_info">i</span>
@@ -249,7 +256,7 @@ div.tip{
 			<input id="port" name="port" type="text" >
 		</label>
 		<label>Inventory
-			<input id="inventory" name="inventory" type="text" >
+			<input id="inventory" name="inventory" type="text" > <span class="info inventory_info">i</span>
 		</label>
 		<br>
 		<div id="integrated_addresses">
@@ -619,7 +626,9 @@ function typeSelect(data,stored_value=''){
 	}
 	if(value == "token"){
 		modal.querySelector('input[name="out_message"]').placeholder='Blank for SCID or add custom message';
-		modal.querySelector('input[name="out_message_uuid"]').checked =false;
+		if(id == 'p_type'){
+			modal.querySelector('input[name="out_message_uuid"]').checked =false;
+		}
 	}	
 	
 }
@@ -676,6 +685,16 @@ function showInfo(event){
 			message = 'SCIDs here will be inherited by all blank integrated addresses below. This can be left blank or overridden by supplying scids at the I.A. level.';
 			text = document.createTextNode(message);
 			div.appendChild(text);
+		}else if(event.target.classList.contains('comment_info')){
+			showing_tip = true;
+			message = 'This will appear in the wallet when the I.A. is entered. Editing the comment, ask amount or port will create a new I.A.';
+			text = document.createTextNode(message);
+			div.appendChild(text);			
+		}else if(event.target.classList.contains('inventory_info')){
+			showing_tip = true;
+			message = 'Product level inventory is used first, if 0 then I.A. level inventory is used instead.';
+			text = document.createTextNode(message);
+			div.appendChild(text);			
 		}
 
 
