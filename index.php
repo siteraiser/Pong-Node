@@ -44,6 +44,9 @@
 .modal label{
 	display:block;
 }
+.modal label.hidden{
+	display:none;
+}
 .modal .close,.modal .clear{
 	float:right;
 	padding:10px;
@@ -159,6 +162,14 @@ div.tip{
 	<div class="close">X</div>
 	<h2>Add New Product / Service</h2>
 	<form>
+		<label>Product Type
+			<select name="p_type" id="p_type">
+				<option value="general">General</option>
+				<option value="physical">Physical Goods</option>
+				<option value="virtual">Virtual Goods</option>
+				<option value="token">Token</option>
+			</select>
+		</label>
 		<label>Product Label
 			<input id="label" name="label" type="text" >
 		</label>
@@ -197,6 +208,15 @@ div.tip{
 	<h2>Edit Product / Service</h2>
 	<form>
 		<input id="pid" name="pid" type="hidden">
+		<label>Product Type
+			<select name="p_type" id="edit_p_type">
+				<option value="general">General</option>
+				<option value="physical">Physical Goods</option>
+				<option value="virtual">Virtual Goods</option>
+				<option value="token">Token</option>
+			</select>
+		</label>
+		
 		<label>Product Label
 			<input id="label" name="label" type="text" >
 		</label>
@@ -544,6 +564,79 @@ input.addEventListener('blur', callConvert, false);
 });	
 
 
+/******************/
+/* Type selection */
+/******************/
+var p_type = document.getElementById("p_type");
+var edit_p_type = document.getElementById("edit_p_type");
+
+//input[value="physical"] ~ input#scid{display:none;}
+p_type.addEventListener("change", typeSelect );
+
+edit_p_type.addEventListener("change", typeSelect );
+
+
+
+
+function typeSelect(data,stored_value=''){
+	let id,value;
+	
+	if(stored_value ==''){
+		id = data.target.id;
+		value = data.target.value;
+	}else{
+		id = 'edit_p_type';
+		value = stored_value;
+	}
+	
+	var modal;
+	if(id=='p_type'){
+		modal = add_product_modal;
+		modal.querySelectorAll('label').forEach((label) => {
+			label.classList.remove("hidden");
+		});
+	}else if(id=='edit_p_type'){
+		modal = edit_product_modal;
+		modal.querySelectorAll('label').forEach((label) => {
+			label.classList.remove("hidden");
+		});
+	}
+
+	if(value == "general"){
+		modal.querySelector('input[name="out_message"]').placeholder='';	
+	}	
+	if(value == "physical"){	
+		hideSCIDFields(id,modal);
+		modal.querySelector('input[name="out_message"]').placeholder='Api Link';
+		modal.querySelector('input[name="out_message_uuid"]').checked =true;
+	}
+	if(value == "virtual"){
+		hideSCIDFields(id,modal);
+		modal.querySelector('input[name="out_message"]').placeholder='Link to E-Goods';
+		if(id == 'p_type'){
+			modal.querySelector('input[name="out_message_uuid"]').checked =false;
+		}
+	}
+	if(value == "token"){
+		modal.querySelector('input[name="out_message"]').placeholder='Blank for SCID or add custom message';
+		modal.querySelector('input[name="out_message_uuid"]').checked =false;
+	}	
+	
+}
+
+
+
+function hideSCIDFields(id,modal){
+	modal.querySelector('input[name="scid"]').value = '';
+	modal.querySelector('input[name="scid"]').parentElement.classList.add("hidden");
+	if(id == 'edit_p_type'){
+		modal.querySelectorAll('input.ia_scid,input.ia_respond_amount').forEach((inp) => {
+			inp.value ='';
+			inp.parentElement.classList.add("hidden");
+		});		
+	}
+}
+
 
 /**********************/
 /* Information / Help */
@@ -859,6 +952,10 @@ function editProducts(pid) {
 	var editing = products_array.find(x => x.id == pid);
 
 	edit_product_modal.querySelector("#pid").value = editing.id;
+	
+	edit_product_modal.querySelector("#edit_p_type").value = editing.p_type;
+	
+	
 	edit_product_modal.querySelector("#label").value = editing.label;
 	edit_product_modal.querySelector("#details").value = editing.details;	
 
@@ -888,26 +985,28 @@ function editProducts(pid) {
 		}
 		
 		
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "Integrated Address: "+iadd.iaddr+"<br>";
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "Comment: "+iadd.comment+"<br>";
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "Ask Amount: "+iadd.ask_amount+ " - (" + niceRound( iadd.ask_amount * .00001) + " Dero)"+"<br>";
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "Port: "+iadd.port+"<br>";
+		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>Integrated Address: "+iadd.iaddr+"</label>";
+		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>Comment: "+iadd.comment+"</label>";
+		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>Ask Amount: "+iadd.ask_amount+ " - (" + niceRound( iadd.ask_amount * .00001) + " Dero)"+"</label>";
+		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>Port: "+iadd.port+"</label>";
 		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "Status Active?: ";
-		let checkbox = '<input id="out_message_uuid" name="iaddress_status['+iadd.id+']" '+(iadd.status == 1?"checked":"")+' type="checkbox" >';
+		let checkbox = '<input class="out_message_uuid" name="iaddress_status['+iadd.id+']" '+(iadd.status == 1?"checked":"")+' type="checkbox" >';
 		
 		edit_product_modal.querySelector("#integrated_addresses").innerHTML += checkbox+"<br>";
 		
-		let ia_scid_input = '<input id="ia_scid" name="ia_scid['+iadd.id+']" value="'+iadd.ia_scid+'" type="text" >';
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "SCID: "+ia_scid_input+"<br>";
+		let ia_scid_input = '<input class="ia_scid" name="ia_scid['+iadd.id+']" value="'+iadd.ia_scid+'" type="text" >';
+		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>SCID: "+ia_scid_input+"</label>";
 		
-		let ia_respond_amount_input = '<input id="ia_respond_amount" name="ia_respond_amount['+iadd.id+']" value="'+iadd.ia_respond_amount+'" type="text" oninput="convert(this)">';
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "SCID Respond Amount: "+ia_respond_amount_input+'<span class="token_units">('+ niceRound(iadd.ia_respond_amount * .00001)+' Token)</span><br>';
+		let ia_respond_amount_input = '<input class="ia_respond_amount" name="ia_respond_amount['+iadd.id+']" value="'+iadd.ia_respond_amount+'" type="text" oninput="convert(this)">';
+		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>SCID Respond Amount: "+ia_respond_amount_input+'<span class="token_units">('+ niceRound(iadd.ia_respond_amount * .00001)+' Token)</span></label>';
 		
-		let inv_input = '<input id="ia_inventory" name="ia_inventory['+iadd.id+']" value="'+iadd.ia_inventory+'" type="text" >';
+		let inv_input = '<input class="ia_inventory" name="ia_inventory['+iadd.id+']" value="'+iadd.ia_inventory+'" type="text" >';
 		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "Inventory: "+inv_input+"<hr>";
 		
 	});
 	
+	//Now run the same function that the select event triggers
+	typeSelect('',editing.p_type);
 	edit_product_modal.classList.remove("hidden");
 	darken_layer.classList.remove("hidden");
 }
