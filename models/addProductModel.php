@@ -71,6 +71,7 @@ class addProductModel extends App {
 	function insertProduct(){
 
 		$query='INSERT INTO products (
+			p_type,
 			label,
 			details,
 			out_message,
@@ -80,9 +81,10 @@ class addProductModel extends App {
 			inventory
 			)
 			VALUES
-			(?,?,?,?,?,?,?)';	
+			(?,?,?,?,?,?,?,?)';	
 		
 		$array=array(
+			$_POST['p_type'],
 			$_POST['label'],
 			$_POST['details'],
 			$_POST['out_message'],
