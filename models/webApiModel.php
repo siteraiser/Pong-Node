@@ -86,7 +86,8 @@ class webApiModel extends App{
 		$stmt->execute([$method,$applicable_id]);	
 	}
 	function logRequest($url,$jsontxt,$error,$method,$applicable_id){
-		
+		//make sure seller has an account setup
+		if($this->id==''){return false;}
 		if($error !=''){
 			$query='INSERT INTO pending (
 				url,
