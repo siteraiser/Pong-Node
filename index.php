@@ -89,7 +89,13 @@ table.txns {
 table.txns,table.txns th, table.txns td {
 	border: 1px solid;
 }
-
+input[name="label"],
+textarea[name="details"],
+input[name="comment"],
+input[name="out_message"],
+input[name="scid"]{
+	width:100%;
+}
 
 #edit_product_modal input[name="comment"],
 #edit_product_modal input[name="ask_amount"],
@@ -183,27 +189,27 @@ div.tip{
 		<label>Product Details
 			<textarea id="details" name="details" type="text" ></textarea>
 		</label>
-		<label>Comment
-			<input id="comment" name="comment" type="text" > <span class="info comment_info">i</span>
+		<label>Comment <span class="info comment_info">i</span>
+			<input id="comment" name="comment" type="text" >
 		</label>
-		<label>Out Message (max 128b)
-			<input id="out_message" name="out_message" type="text" maxlength="128"> <span class="info out_message_info">i</span>
+		<label>Out Message (max 128b) <span class="info out_message_info">i</span>
+			<input id="out_message" name="out_message" type="text" maxlength="128">
 		</label>
 		Only Use UUID <input id="add_out_message_uuid" name="out_message_uuid" type="checkbox" > <span class="info out_message_uuid_info">i</span>
 		<label>Ask Amount (atomic units)
-			<input id="ask_amount" class="atomic_units dero" name="ask_amount" type="text" ><span class="token_units"></span>
+			<input id="ask_amount" class="atomic_units dero" name="ask_amount" type="number" step="1"><span class="token_units"></span>
 		</label>
-		<label>SCID 
-			<input id="scid" name="scid" type="text" > <span class="info scid_info">i</span>
+		<label>SCID <span class="info scid_info">i</span>
+			<input id="scid" name="scid" type="text" >
 		</label>
 		<label>Respond Amount (atomic units)
-			<input id="respond_amount" class="atomic_units" name="respond_amount" type="text" ><span class="token_units"></span>
+			<input id="respond_amount" class="atomic_units" name="respond_amount" type="number" step="1"><span class="token_units"></span>
 		</label>
-		<label>Port
-			<input id="port" name="port" type="text" >
+		<label>Port (uint 64)
+			<input id="port" name="port" type="number" step="1">
 		</label>
 		<label>Inventory
-			<input id="inventory" name="inventory" type="text" > <span class="info inventory_info">i</span>
+			<input id="inventory" name="inventory" type="number" step="1"> <span class="info inventory_info">i</span>
 		</label>
 		<br>
 		<button role="button" id="add_product">Add Product</button>
@@ -234,29 +240,29 @@ div.tip{
 			<input type='file' />
 			<br><img id="img" name="img" style="max-height:100px;" src="#">
 		</label>				
-		<label>Comment
-			<input id="comment" name="comment" type="text" > <span class="info comment_info">i</span>
+		<label>Comment <span class="info comment_info">i</span>
+			<input id="comment" name="comment" type="text" >
 		</label>
-		<label>Out Message (max 128b)
-			<input id="edit_out_message" name="out_message" type="text" maxlength="128"> <span class="info out_message_info">i</span>
+		<label>Out Message (max 128b) <span class="info out_message_info">i</span>
+			<input id="edit_out_message" name="out_message" type="text" maxlength="128">
 		</label>
 		Only Use UUID <input id="out_message_uuid" name="out_message_uuid" type="checkbox" > <span class="info out_message_uuid_info">i</span>
 		
 		<label>Ask Amount (atomic units)
-			<input id="ask_amount" class="atomic_units dero" name="ask_amount" type="text" ><span class="token_units"></span>
+			<input id="ask_amount" class="atomic_units dero" name="ask_amount" type="number" step="1"><span class="token_units"></span>
 		</label>
 		
-		<label>SCID 
-			<input id="edit_scid" name="scid" type="text" > <span class="info scid_info">i</span>
+		<label>SCID <span class="info scid_info">i</span>
+			<input id="edit_scid" name="scid" type="text" >
 		</label>
-		<label>Respond Amount (atomic units, Dero if not a smart contract)
-			<input id="respond_amount"class="atomic_units" name="respond_amount" type="text" ><span class="token_units"></span>
+		<label>Respond Amount (atomic units, Dero if not a Token transfer)
+			<input id="respond_amount"class="atomic_units" name="respond_amount" type="number" step="1"><span class="token_units"></span>
 		</label>
-		<label>Port
-			<input id="port" name="port" type="text" >
+		<label>Port (uint 64)
+			<input id="port" name="port" type="number" step="1" >
 		</label>
 		<label>Inventory
-			<input id="inventory" name="inventory" type="text" > <span class="info inventory_info">i</span>
+			<input id="inventory" name="inventory" type="number" step="1"> <span class="info inventory_info">i</span>
 		</label>
 		<br>
 		<div id="integrated_addresses">
@@ -614,19 +620,29 @@ function typeSelect(data,stored_value=''){
 	}	
 	if(value == "physical"){	
 		hideSCIDFields(id,modal);
-		modal.querySelector('input[name="out_message"]').placeholder='Api Link';
-		modal.querySelector('input[name="out_message_uuid"]').checked =true;
+		modal.querySelector('input[name="out_message"]').placeholder='Api Url, sends uuid to website';
+		
+		if(api_url=='https://ponghub.com/papi'){
+			modal.querySelector('input[name="out_message"]').placeholder='Register website with api url in settings';
+		}
+		
+		modal.querySelector('input[name="out_message_uuid"]').checked =true;	
+		if(id == 'p_type'){
+			modal.querySelector('input[name="out_message"]').value = api_url;
+		}
 	}
 	if(value == "digital"){
 		hideSCIDFields(id,modal);
-		modal.querySelector('input[name="out_message"]').placeholder='Link to E-Goods';
+		modal.querySelector('input[name="out_message"]').placeholder='Link to E-Goods (https://news.com/eg1)';
 		if(id == 'p_type'){
+			modal.querySelector('input[name="out_message"]').value ='';
 			modal.querySelector('input[name="out_message_uuid"]').checked =false;
 		}
 	}
 	if(value == "token"){
 		modal.querySelector('input[name="out_message"]').placeholder='Blank for SCID or add custom message';
 		if(id == 'p_type'){
+			modal.querySelector('input[name="out_message"]').value ='';
 			modal.querySelector('input[name="out_message_uuid"]').checked =false;
 		}
 	}	
@@ -810,7 +826,7 @@ function displayProducts(products){
 /******************/
 /* Initialization */
 /******************/
-
+var api_url = '';
 function initialize(runit) {
 	async function getProducts(data) {
 	  try {
@@ -826,6 +842,8 @@ function initialize(runit) {
 
 		const result = await response.json();			
 		//console.log("Success:", result);
+		api_url=result.api_url;
+
 		products_array=result.products;
 		displayProducts(products_array);
 		runit();
