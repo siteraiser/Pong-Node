@@ -12,6 +12,7 @@ CREATE TABLE settings (
 
 CREATE TABLE products (
 	id smallint(6) unsigned NOT NULL auto_increment,
+	p_type varchar(20) NULL,
 	label varchar(1500) NULL,
 	details varchar(2500) NULL,
 	out_message varchar(144) NULL,
