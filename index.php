@@ -173,7 +173,7 @@ div.tip{
 			<select name="p_type" id="p_type">
 				<option value="general">General</option>
 				<option value="physical">Physical Goods</option>
-				<option value="virtual">Virtual Goods</option>
+				<option value="digital">Digital Goods</option>
 				<option value="token">Token</option>
 			</select>
 		</label>
@@ -219,7 +219,7 @@ div.tip{
 			<select name="p_type" id="edit_p_type">
 				<option value="general">General</option>
 				<option value="physical">Physical Goods</option>
-				<option value="virtual">Virtual Goods</option>
+				<option value="digital">Digital Goods</option>
 				<option value="token">Token</option>
 			</select>
 		</label>
@@ -617,7 +617,7 @@ function typeSelect(data,stored_value=''){
 		modal.querySelector('input[name="out_message"]').placeholder='Api Link';
 		modal.querySelector('input[name="out_message_uuid"]').checked =true;
 	}
-	if(value == "virtual"){
+	if(value == "digital"){
 		hideSCIDFields(id,modal);
 		modal.querySelector('input[name="out_message"]').placeholder='Link to E-Goods';
 		if(id == 'p_type'){
