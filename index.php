@@ -751,6 +751,7 @@ function generateProduct(product) {
 	button.appendChild(edit);
 	main.appendChild(button);
 	
+	div.appendChild(createSection("Type: " +product.p_type));
 	div.appendChild(createSection("Label: " +product.label));
 	div.appendChild(createSection("Details: " +product.details));	
 	div.appendChild(createSection("Inventory: " +product.inventory));	
