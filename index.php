@@ -339,7 +339,9 @@ function settings(form) {
 		var result = await response.json();			
 
 		createSettingsForm(result);
+		api_url = document.querySelector('input[name="web_api_url"]').value;
 		
+		api_url
 	  } catch (error) {
 		console.error("Error:", error);
 	  }
