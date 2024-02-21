@@ -186,6 +186,7 @@ class editProductModel extends App {
 		
 		
 		$query='UPDATE products SET 
+			p_type=:p_type,
 			label=:label,
 			details=:details,
 			out_message=:out_message,
@@ -200,6 +201,7 @@ class editProductModel extends App {
 		
 		$stmt=$this->pdo->prepare($query);
 		$stmt->execute(array(
+			':p_type'=>$_POST['p_type'],
 			':label'=>$_POST['label'],
 			':details'=>$_POST['details'],				
 			':out_message'=>$_POST['out_message'],
