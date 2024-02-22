@@ -76,12 +76,13 @@ class addProductModel extends App {
 			details,
 			out_message,
 			out_message_uuid,
+			api_url,
 			scid,
 			respond_amount,
 			inventory
 			)
 			VALUES
-			(?,?,?,?,?,?,?,?)';	
+			(?,?,?,?,?,?,?,?,?)';	
 		
 		$array=array(
 			$_POST['p_type'],
@@ -89,6 +90,7 @@ class addProductModel extends App {
 			$_POST['details'],
 			$_POST['out_message'],
 			isset($_POST['out_message_uuid']) ? 1 : 0,
+			$_POST['api_url'],
 			$_POST['scid'],
 			($_POST['respond_amount']=='' || $_POST['respond_amount'] < 1 ? 1 :$_POST['respond_amount']),
 			0
