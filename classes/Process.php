@@ -7,7 +7,7 @@ class Process extends App {
 		$this->loadModel("deroApiModel");
 		$this->loadModel("webApiModel");
 		$this->loadModel("productModel");
-		
+
 
 
 		//Retry all failed webapi calls.
@@ -89,7 +89,8 @@ class Process extends App {
 					// uuid is in $record['response_out_message']
 					// custom API Address is in  = $record['out_message'];	
 
-					$res = $this->webApiModel->newTX($record);						
+					$res = $this->webApiModel->newTX($record);	
+					
 				}else if($record['type'] == 'sc_refund_not_enough_tokens'){
 					//Out of tokens refund confirmed... set i address to inactive
 					$this->loadModel('editProductModel');
@@ -170,10 +171,11 @@ class Process extends App {
 		foreach($notProcessed as &$tx){
 			
 			$settings = $this->processModel->getIAsettings($tx);
-			if($settings['scid'] != '' || $settings['ia_scid'] != ''){
+			if($settings['scid'] != ''){
+				continue 1;
+			}else if($settings['ia_scid'] != ''){
 				continue 1;
 			}
-			
 			$transfer=[];
 			$successful=false;
 			if($settings !== false){
@@ -190,10 +192,12 @@ class Process extends App {
 				$transfer['respond_amount'] = $settings['respond_amount'];
 				$transfer['address'] = $tx['buyer_address'];	
 				
+				$unique_identifier ='';
 				//See if use uuid is selected, generate one if so.
 				if($settings['out_message_uuid'] == 1){
 					$UUID = new UUID;
-					$settings['out_message'] = $UUID->v4();
+					$unique_identifier = $UUID->v4();
+					$settings['out_message'] = $settings['out_message'] . $unique_identifier;
 				}
 				
 				//Use original out message if not a uuid (usually a link or some text)...
@@ -204,6 +208,7 @@ class Process extends App {
 				if($pending_response !==false){
 					//Found a previous repsonse, use that instead of a new one (in case of double response we want the same confirmation number for address submission)
 					$transfer['out_message'] = $pending_response['out_message'];
+					$unique_identifier = $pending_response['out_message'];
 					
 				}
 
@@ -214,8 +219,10 @@ class Process extends App {
 				$tx['respond_amount'] = $transfer['respond_amount'];
 				$tx['out_message'] = $transfer['out_message'];
 				$tx['out_message_uuid'] = $settings['out_message_uuid'];
+				$tx['uuid'] = $unique_identifier;
+				$tx['api_url'] = $settings['api_url'];
 				$tx['out_scid']=$transfer['scid'];
-				$tx['crc32'] = ($transfer['out_message'] == ''?1:crc32($transfer['out_message']));
+				$tx['crc32'] = ($unique_identifier == ''?1:crc32($unique_identifier));
 				$tx['type'] = "sale";
 				
 				
@@ -232,7 +239,9 @@ class Process extends App {
 				//update unprocessed array
 				$tx['respond_amount'] =  $tx['amount'];
 				$tx['out_message'] = $transfer['out_message'];				
-				$tx['out_message_uuid'] = '';				
+				$tx['out_message_uuid'] = '';
+				$tx['uuid'] = '';
+				$tx['api_url'] = '';				
 				$tx['out_scid']=$transfer['scid'];				
 				$tx['crc32'] = '';
 				$tx['type'] = "refund";
@@ -256,22 +265,26 @@ class Process extends App {
 			$payload_result = $this->deroApiModel->transfer($transfer_list);
 			$payload_result = json_decode($payload_result);
 
-			if($payload_result != null && $payload_result->result){
+			if($payload_result != null && isset($payload_result->result)){
 				$responseTXID = $payload_result->result->txid;
 			}else{
-				$errors[] = "Transfer Error";
+				$errors[] = "Transfer Error:".$payload_result->error->message;
 			}
 		}
 
 
 		if(empty($errors) && $responseTXID !== ''){
 			foreach($notProcessed as $tx){
+				//
+				///check this!!
 				//Not set, not a regular product...
 				if(! isset($tx['out_scid'])){
 					continue 1;
-					//if($tx['out_scid'] != '0000000000000000000000000000000000000000000000000000000000000000'){}
-						
-					
+					//
+				}else{
+					if($tx['out_scid'] != '0000000000000000000000000000000000000000000000000000000000000000'){
+						continue 1;
+					}
 				}
 				//Mark incoming transaction as processed. 
 				//In the next check cycle it can be set to unprocessed above if response is not confirmed, then it is reprocessed. 
@@ -292,6 +305,8 @@ class Process extends App {
 					"port"=>$tx['port'],
 					"out_message"=>$tx['out_message'],
 					"out_message_uuid"=>$tx['out_message_uuid'],
+					"uuid"=>$tx['uuid'],
+					"api_url"=>$tx['api_url'],
 					"out_scid"=>$tx['out_scid'],
 					"crc32"=>$tx['crc32'],
 					"time_utc"=>$time_utc
@@ -332,11 +347,15 @@ class Process extends App {
 				//Is a smart contract token transfer...
 				
 				//Send Response to buyer
+				
 				//See if use uuid is selected, generate one if so.
+				$unique_identifier = '';
 				if($settings['out_message_uuid'] == 1){
 					$UUID = new UUID;
-					$settings['out_message'] = $UUID->v4();
+					$unique_identifier = $UUID->v4();
+					$settings['out_message'] = $settings['out_message'] . $unique_identifier;
 				}
+				
 				
 				//Use original out message if not a uuid (usually a link or some text)...
 				$transfer['out_message'] = $settings['out_message'];	
@@ -373,7 +392,7 @@ class Process extends App {
 				if($pending_response !==false){
 					//Found a previous repsonse, use that instead of a new one (in case of double response we want the same confirmation number for address submission)
 					$transfer['out_message'] = $pending_response['out_message'];
-					
+					$unique_identifier = $pending_response['out_message'];
 				}
 			
 				
@@ -383,8 +402,10 @@ class Process extends App {
 				$tx['respond_amount'] = $transfer['respond_amount'];
 				$tx['out_message'] = $transfer['out_message'];
 				$tx['out_message_uuid'] = $settings['out_message_uuid'];
+				$tx['uuid'] = $unique_identifier;
+				$tx['api_url'] = $settings['api_url'];
 				$tx['out_scid']=$transfer['scid'];
-				$tx['crc32'] = ($transfer['out_message'] == ''?1:crc32($transfer['out_message']));
+				$tx['crc32'] = ($unique_identifier == ''?1:crc32($unique_identifier));//not really required for token xfers...
 				$tx['type'] = "sc_sale";
 			
 			
@@ -403,6 +424,8 @@ class Process extends App {
 				$tx['respond_amount'] =  $tx['amount'];
 				$tx['out_message'] = $transfer['out_message'];				
 				$tx['out_message_uuid'] = '';
+				$tx['uuid'] = '';
+				$tx['api_url'] = '';
 				$tx['out_scid']=$transfer['scid'];
 				$tx['crc32'] = '';
 				$tx['type'] = "sc_refund";
@@ -439,7 +462,9 @@ class Process extends App {
 				$tx['respond_amount'] =  $tx['amount'];
 				$tx['out_message'] = $transfer['out_message'];				
 				$tx['out_message_uuid'] = '';
-				$tx['out_scid']=$transfer['scid'];
+				$tx['uuid'] = '';
+				$tx['api_url'] = '';
+				$tx['out_scid']=$transfer['scid'];				
 				$tx['crc32'] = '';
 				$tx['type'] = "sc_refund_not_enough_tokens";
 				
@@ -447,7 +472,7 @@ class Process extends App {
 				$payload_result = $this->deroApiModel->transfer([$sc_transfer]);
 				$payload_result = json_decode($payload_result);
 
-				if($payload_result != null && $payload_result->result){
+				if($payload_result != null && isset($payload_result->result)){
 					$responseTXID = $payload_result->result->txid;
 				}else{
 					$errors[] = "SC Refund Transfer Error";
@@ -472,6 +497,8 @@ class Process extends App {
 					"port"=>$tx['port'],
 					"out_message"=>$tx['out_message'],
 					"out_message_uuid"=>$tx['out_message_uuid'],
+					"uuid"=>$tx['uuid'],
+					"api_url"=>$tx['api_url'],
 					"out_scid"=>$tx['out_scid'],
 					"crc32"=>$tx['crc32'],
 					"time_utc"=>$time_utc
