@@ -417,6 +417,10 @@ class processModel extends App {
 	}
 
 	function updateResponseTX($response){
+		$given = new DateTime();
+		$given->setTimezone(new DateTimeZone("UTC"));
+		$time_utc = $given->format("Y-m-d H:i:s");
+		
 		//Add to list of txns
 		$responseTXIDS = $this->getRespsonseTXIDS($response->incoming_id);		
 		$responseTXIDS = explode(",",$responseTXIDS);		
@@ -426,13 +430,15 @@ class processModel extends App {
 		
 		$query='UPDATE responses SET 
 			txid=:txid,
-			txids=:txids
+			txids=:txids,
+			time_utc=:time_utc
 			WHERE incoming_id=:incoming_id';	
 		
 		$stmt=$this->pdo->prepare($query);
 		$stmt->execute(array(
 			':txid'=>$response->txid,
 			':txids'=>$responseTXIDS,
+			':time_utc'=>$time_utc,
 			':incoming_id'=>$response->incoming_id));				
 					
 		if($stmt->rowCount()==0){
@@ -471,12 +477,14 @@ class processModel extends App {
 			port,
 			out_message,
 			out_message_uuid,
+			uuid,
+			api_url,
 			out_scid,
 			crc32,
 			time_utc
 			)
 			VALUES
-			(?,?,?,?,?,?,?,?,?,?,?,?)
+			(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 			';	
 		
 		$array=array(
@@ -489,6 +497,8 @@ class processModel extends App {
 			$response->port,
 			$response->out_message,
 			$response->out_message_uuid,
+			$response->uuid,
+			$response->api_url,
 			$response->out_scid,
 			$response->crc32,
 			$response->time_utc
