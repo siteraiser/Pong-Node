@@ -450,7 +450,7 @@ class Process extends App {
 		$transfer['address'] = $tx['buyer_address'];	
 		$transfer['out_message'] =  "Integrated Address Inactive.";	
 		$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";
-		$transfer_list[]=(object)$transfer;	
+		$transfer_object=(object)$transfer;	
 		//update unprocessed array
 		$tx['respond_amount'] =  $tx['amount'];
 		$tx['out_message'] = $transfer['out_message'];				
