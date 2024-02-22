@@ -94,12 +94,14 @@ class Process extends App {
 				}else if($record['type'] == 'sc_refund_not_enough_tokens'){
 					//Out of tokens refund confirmed... set i address to inactive
 					$this->loadModel('editProductModel');
-					$this->editProductModel->toggleIAddr($record['ia_id'],0);
-					//Send update through web api.
-					$ia = $this->productModel->getIAddressById($record['ia_id']);
-					$this->webApiModel->submitIAddress($ia);
-					
-					$product_changes = true;
+					if($record['for_ia_id'] != ''){
+						$this->editProductModel->toggleIAddr($record['for_ia_id'],0);
+						//Send update through web api.
+						$ia = $this->productModel->getIAddressById($record['ia_id']);
+						$this->webApiModel->submitIAddress($ia);
+						
+						$product_changes = true;
+					}
 				}
 				
 			}
@@ -184,69 +186,18 @@ class Process extends App {
 				}				
 			}
 			
-			if($successful){//Was found and had enough inventory.
-
-
-				
-				//Send Response to buyer
-				$transfer['respond_amount'] = $settings['respond_amount'];
-				$transfer['address'] = $tx['buyer_address'];	
-				
-				$unique_identifier ='';
-				//See if use uuid is selected, generate one if so.
-				if($settings['out_message_uuid'] == 1){
-					$UUID = new UUID;
-					$unique_identifier = $UUID->v4();
-					$settings['out_message'] = $settings['out_message'] . $unique_identifier;
-				}
-				
-				//Use original out message if not a uuid (usually a link or some text)...
-				$transfer['out_message'] = $settings['out_message'];				
-				
-				//Check for a pending response for this incoming tx
-				$pending_response = $this->processModel->checkForResponseById($tx['id']);
-				if($pending_response !==false){
-					//Found a previous repsonse, use that instead of a new one (in case of double response we want the same confirmation number for address submission)
-					$transfer['out_message'] = $pending_response['out_message'];
-					$unique_identifier = $pending_response['out_message'];
-					
-				}
-
-				$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";				
-				$transfer_list[]=(object)$transfer;
-				//update unprocessed array
-				$tx['ia_comment'] = $settings['ia_comment'];
-				$tx['respond_amount'] = $transfer['respond_amount'];
-				$tx['out_message'] = $transfer['out_message'];
-				$tx['out_message_uuid'] = $settings['out_message_uuid'];
-				$tx['uuid'] = $unique_identifier;
-				$tx['api_url'] = $settings['api_url'];
-				$tx['out_scid']=$transfer['scid'];
-				$tx['crc32'] = ($unique_identifier == ''?1:crc32($unique_identifier));
-				$tx['type'] = "sale";
-				
-				
+			if($successful){
+				//Was found and had enough inventory.
+				$xfer = $this->createTransfer($tx,$settings);
+				$tx = $xfer->tx;
+				$transfer_list[] = $xfer->xfer;
 
 			}else{
 				//No mathcing products / I. Addresses found
 				//Send Refund to buyer
-				
-				$transfer['respond_amount'] = $tx['amount'];
-				$transfer['address'] = $tx['buyer_address'];	
-				$transfer['out_message'] =  "Integrated Address Inactive.";	
-				$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";
-				$transfer_list[]=(object)$transfer;	
-				//update unprocessed array
-				$tx['respond_amount'] =  $tx['amount'];
-				$tx['out_message'] = $transfer['out_message'];				
-				$tx['out_message_uuid'] = '';
-				$tx['uuid'] = '';
-				$tx['api_url'] = '';				
-				$tx['out_scid']=$transfer['scid'];				
-				$tx['crc32'] = '';
-				$tx['type'] = "refund";
-	
-				
+				$xfer = $this->createRefundTransfer($tx,$settings);
+				$tx = $xfer->tx;
+				$transfer_list[] = $xfer->xfer;
 			}
 			
 			
@@ -268,7 +219,11 @@ class Process extends App {
 			if($payload_result != null && isset($payload_result->result)){
 				$responseTXID = $payload_result->result->txid;
 			}else{
-				$errors[] = "Transfer Error:".$payload_result->error->message;
+				if($payload_result->error){
+					$errors[] = "Error: ".$payload_result->error->message;
+				}else{
+					$errors[] = "Unkown Transfer Error";
+				}
 			}
 		}
 
@@ -282,7 +237,7 @@ class Process extends App {
 					continue 1;
 					//
 				}else{
-					if($tx['out_scid'] != '0000000000000000000000000000000000000000000000000000000000000000'){
+					if(!($tx['type'] == 'sale' || $tx['type'] == 'refund') ){
 						continue 1;
 					}
 				}
@@ -328,194 +283,113 @@ class Process extends App {
 		/***  separate transfers     ***/
 		/*******************************/
 			
-			
-		foreach($notProcessed as &$tx){
-			$settings = $this->processModel->getIAsettings($tx);	
-			if($settings['scid'] == '' && $settings['ia_scid'] == ''){
-				continue 1;
-			}
-			$transfer=[];
-			$successful=false;
-			if($settings !== false){
-				if($tx['successful'] == 1){
-					$successful = true;
-				}				
-			}
-			
-			
-			if($successful){
-				//Is a smart contract token transfer...
-				
-				//Send Response to buyer
-				
-				//See if use uuid is selected, generate one if so.
-				$unique_identifier = '';
-				if($settings['out_message_uuid'] == 1){
-					$UUID = new UUID;
-					$unique_identifier = $UUID->v4();
-					$settings['out_message'] = $settings['out_message'] . $unique_identifier;
-				}
-				
-				
-				//Use original out message if not a uuid (usually a link or some text)...
-				$transfer['out_message'] = $settings['out_message'];	
-				
+		//transfer_list	
 
-				
-				//Use Integrated Address scid if defined.
-				$transfer['scid'] = $settings['scid'];
-				if($settings['ia_scid'] != ''){
-					$transfer['scid'] = $settings['ia_scid'];
+		if(empty($transfer_list)){//Done with regular response transfer
+			$sent_one = false;			
+			foreach($notProcessed as &$tx){
+				if($sent_one){
+					break;
+				}
+				$settings = $this->processModel->getIAsettings($tx);	
+				if($settings['scid'] == '' && $settings['ia_scid'] == ''){
+					continue 1;
+				}
+				$transfer=[];
+				$successful=false;
+				if($settings !== false){
+					if($tx['successful'] == 1){
+						$successful = true;
+					}				
 				}
 				
-			
-				
-				
-				
-				//Use scid as out message if message is null.
-				if($transfer['out_message'] == ''){
-					$transfer['out_message'] = $transfer['scid'];
-				}
-				
-				//Use Integrated Address respond amount if defined.
-				$transfer['respond_amount'] = $settings['respond_amount'];//
-				if($settings['ia_respond_amount'] !== '' && $settings['ia_respond_amount'] > 0){
-					$transfer['respond_amount'] = $settings['ia_respond_amount'];
-				}
+				if($successful==1){
+					//Is a smart contract token transfer...				
+					//Send Response to buyer
+					$xfer = $this->createSCTransfer($tx,$settings);	
+					$tx = $xfer->tx;
+					$sc_transfer = $xfer->xfer;
 
-				$transfer['address'] = $tx['buyer_address'];	
-				
-		
-				
-				//Check for a pending response for this incoming tx
-				$pending_response = $this->processModel->checkForResponseById($tx['id']);
-				if($pending_response !==false){
-					//Found a previous repsonse, use that instead of a new one (in case of double response we want the same confirmation number for address submission)
-					$transfer['out_message'] = $pending_response['out_message'];
-					$unique_identifier = $pending_response['out_message'];
-				}
-			
-				
-				$sc_transfer=(object)$transfer;
-				//update unprocessed array
-				$tx['ia_comment'] = $settings['ia_comment'];
-				$tx['respond_amount'] = $transfer['respond_amount'];
-				$tx['out_message'] = $transfer['out_message'];
-				$tx['out_message_uuid'] = $settings['out_message_uuid'];
-				$tx['uuid'] = $unique_identifier;
-				$tx['api_url'] = $settings['api_url'];
-				$tx['out_scid']=$transfer['scid'];
-				$tx['crc32'] = ($unique_identifier == ''?1:crc32($unique_identifier));//not really required for token xfers...
-				$tx['type'] = "sc_sale";
-			
-			
-			
-			}else{
-			
-				//No mathcing products / I. Addresses found
-				//Send Refund to buyer
-				
-				$transfer['respond_amount'] = $tx['amount'];
-				$transfer['address'] = $tx['buyer_address'];	
-				$transfer['out_message'] =  "Integrated Address for S.C. Inactive.";	
-				$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";
-				$sc_transfer=(object)$transfer;	
-				//update unprocessed array
-				$tx['respond_amount'] =  $tx['amount'];
-				$tx['out_message'] = $transfer['out_message'];				
-				$tx['out_message_uuid'] = '';
-				$tx['uuid'] = '';
-				$tx['api_url'] = '';
-				$tx['out_scid']=$transfer['scid'];
-				$tx['crc32'] = '';
-				$tx['type'] = "sc_refund";
+				}else if($successful==0){
 
-			
-			} 
-			
-			
-			$responseTXID='';
-			$payload_result = $this->deroApiModel->transfer([$sc_transfer]);
-			$payload_result = json_decode($payload_result);
+					//No mathcing products with inv. / I. Addresses found
+					//Send Refund to buyer
+					$xfer = $this->createRefundSCTransfer($tx,$settings);	
+					$tx = $xfer->tx;
+					$sc_transfer = $xfer->xfer;		
+					
+				}else if($successful==2){
 
-			if($payload_result != null && isset($payload_result->result)){
+					$xfer = $this->createRefundSCTransfer($tx,$settings);	
+					$tx = $xfer->tx;
+					$sc_transfer = $xfer->xfer;		
 				
-				$responseTXID = $payload_result->result->txid;
+					$tx['type'] = "sc_refund_not_enough_tokens";
+					
+				} 
 				
-			}else{
-				//After confirmation set ia status to false if transfer fails... and update with api
-				/*$this->loadModel('editProductModel');
-				$this->editProductModel->toggleIAddr($settings['ia_id'],0);
-				//Send update through web api.
-				$ia = $this->productModel->getIAddressById($settings['ia_id']);
-				$this->webApiModel->submitIAddress($ia);
-				*/
-				
-				$errors[] = "SC Transfer Error";
-				
-				$transfer['respond_amount'] = $tx['amount'];
-				$transfer['address'] = $tx['buyer_address'];	
-				$transfer['out_message'] =  "Fresh Out of Those";	
-				$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";
-				$sc_transfer=(object)$transfer;	
-				//update unprocessed array
-				$tx['respond_amount'] =  $tx['amount'];
-				$tx['out_message'] = $transfer['out_message'];				
-				$tx['out_message_uuid'] = '';
-				$tx['uuid'] = '';
-				$tx['api_url'] = '';
-				$tx['out_scid']=$transfer['scid'];				
-				$tx['crc32'] = '';
-				$tx['type'] = "sc_refund_not_enough_tokens";
-				
-				
+			
+				$responseTXID='';
 				$payload_result = $this->deroApiModel->transfer([$sc_transfer]);
 				$payload_result = json_decode($payload_result);
-
+				$sent_one = true;
 				if($payload_result != null && isset($payload_result->result)){
+					
 					$responseTXID = $payload_result->result->txid;
+					
 				}else{
-					$errors[] = "SC Refund Transfer Error";
+					if(isset($payload_result->error)){
+						if(strstr($payload_result->error->message, "Insufficent funds")){
+							$errors[] = "SC Transfer Error. ".$payload_result->error->message;					
+							// Save incoming as successful = 2 to signal it was a not enough tokens error...Reprocess...
+							$this->processModel->markIncSuccessfulTwo($tx['id']);		
+						}else{
+							$errors[] = "SC Transfer Error. ".$payload_result->error->message;
+						}
+					}else{						
+						$errors[] = "Unkown Transfer Error";
+					}
 				}
-			}
-			
-			if($responseTXID !== ''){
-				$result = $this->processModel->markAsProcessed($tx['txid']);
-					
-				$given = new DateTime();
-				$given->setTimezone(new DateTimeZone("UTC"));	
-				$time_utc = $given->format("Y-m-d H:i:s");
 				
+				if($responseTXID !== ''){
+					$result = $this->processModel->markAsProcessed($tx['txid']);
+						
+					$given = new DateTime();
+					$given->setTimezone(new DateTimeZone("UTC"));	
+					$time_utc = $given->format("Y-m-d H:i:s");
+					
 
-				if($result !== false){
-					$response = (object)[
-					"incoming_id"=>$tx['id'],
-					"txid"=>$responseTXID,
-					"type"=>$tx['type'],
-					"buyer_address"=>$tx['buyer_address'],
-					"out_amount"=>$tx['respond_amount'],
-					"port"=>$tx['port'],
-					"out_message"=>$tx['out_message'],
-					"out_message_uuid"=>$tx['out_message_uuid'],
-					"uuid"=>$tx['uuid'],
-					"api_url"=>$tx['api_url'],
-					"out_scid"=>$tx['out_scid'],
-					"crc32"=>$tx['crc32'],
-					"time_utc"=>$time_utc
-					];
-					
-					
-				$this->processModel->saveResponse($response);
-					
-				$messages[] = "{$tx['type']} response initiated". ($tx['type'] == 'sc_sale' ? ' for "'.$tx['ia_comment'].'"' : '') . ".";
-			
+					if($result !== false){
+						$response = (object)[
+						"incoming_id"=>$tx['id'],
+						"txid"=>$responseTXID,
+						"type"=>$tx['type'],
+						"buyer_address"=>$tx['buyer_address'],
+						"out_amount"=>$tx['respond_amount'],
+						"port"=>$tx['port'],
+						"out_message"=>$tx['out_message'],
+						"out_message_uuid"=>$tx['out_message_uuid'],
+						"uuid"=>$tx['uuid'],
+						"api_url"=>$tx['api_url'],
+						"out_scid"=>$tx['out_scid'],
+						"crc32"=>$tx['crc32'],
+						"time_utc"=>$time_utc
+						];
+						
+						
+					$this->processModel->saveResponse($response);
+						
+					$messages[] = "{$tx['type']} response initiated for: {$tx['respond_amount']}". ($tx['type'] == 'sc_sale' ? ' for "'.$tx['ia_comment'].'"' : '') . ".";
+				
+					}
+				
 				}
-			
+				
 			}
-			
-		}
 
-		unset($tx);
+			unset($tx);
+
+		}
 
 
 
@@ -530,6 +404,150 @@ class Process extends App {
 		return ["success"=>true,"messages"=>$messages,"errors"=>$errors];
 
 	}
+	
+	
+	public function createTransfer(&$tx,$settings){
+
+		//Send Response to buyer
+		$transfer['respond_amount'] = $settings['respond_amount'];
+		$transfer['address'] = $tx['buyer_address'];	
+			
+		$unique_identifier ='';
+		//See if use uuid is selected, generate one if so.
+		if($settings['out_message_uuid'] == 1){
+			$UUID = new UUID;
+			$unique_identifier = $UUID->v4();
+			$settings['out_message'] = $settings['out_message'] . $unique_identifier;
+		}
+			
+		//Use original out message if not a uuid (usually a link or some text)...
+		$transfer['out_message'] = $settings['out_message'];				
+			
+		//Check for a pending response for this incoming tx
+		$pending_response = $this->processModel->checkForResponseById($tx['id']);
+		if($pending_response !==false){
+			//Found a previous repsonse, use that instead of a new one (in case of double response we want the same confirmation number for address submission)
+			$transfer['out_message'] = $pending_response['out_message'];
+			$unique_identifier = $pending_response['out_message'];
+				
+		}
+		$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";				
+		$transfer_object=(object)$transfer;
+		//update unprocessed array
+		$tx['ia_comment'] = $settings['ia_comment'];
+		$tx['respond_amount'] = $transfer['respond_amount'];
+		$tx['out_message'] = $transfer['out_message'];
+		$tx['out_message_uuid'] = $settings['out_message_uuid'];
+		$tx['uuid'] = $unique_identifier;
+		$tx['api_url'] = $settings['api_url'];
+		$tx['out_scid']=$transfer['scid'];
+		$tx['crc32'] = ($unique_identifier == ''?1:crc32($unique_identifier));
+		$tx['type'] = "sale";
+			
+		return (object)["tx"=>$tx,"xfer"=>$transfer_object];
+	}
+	
+	public function createRefundTransfer(&$tx,$settings){	
+		$transfer['respond_amount'] = $tx['amount'];
+		$transfer['address'] = $tx['buyer_address'];	
+		$transfer['out_message'] =  "Integrated Address Inactive.";	
+		$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";
+		$transfer_list[]=(object)$transfer;	
+		//update unprocessed array
+		$tx['respond_amount'] =  $tx['amount'];
+		$tx['out_message'] = $transfer['out_message'];				
+		$tx['out_message_uuid'] = '';
+		$tx['uuid'] = '';
+		$tx['api_url'] = '';				
+		$tx['out_scid']=$transfer['scid'];				
+		$tx['crc32'] = '';
+		$tx['type'] = "refund";
+		
+		return (object)["tx"=>$tx,"xfer"=>$transfer_object];
+	}
+	
+	public function createSCTransfer(&$tx,$settings){		
+		//See if use uuid is selected, generate one if so.
+		$unique_identifier = '';
+		if($settings['out_message_uuid'] == 1){
+			$UUID = new UUID;
+			$unique_identifier = $UUID->v4();
+			$settings['out_message'] = $settings['out_message'] . $unique_identifier;
+		}
+					
+		//Use original out message if not a uuid (usually a link or some text)...
+		$transfer['out_message'] = $settings['out_message'];	
+
+		//Use Integrated Address scid if defined.
+		$transfer['scid'] = $settings['scid'];
+		if($settings['ia_scid'] != ''){
+			$transfer['scid'] = $settings['ia_scid'];
+		}
+		//Use scid as out message if message is null.
+		if($transfer['out_message'] == ''){
+			$transfer['out_message'] = $transfer['scid'];
+		}
+		
+		//Use Integrated Address respond amount if defined.
+		$transfer['respond_amount'] = $settings['respond_amount'];//
+		if($settings['ia_respond_amount'] !== '' && $settings['ia_respond_amount'] > 0){
+			$transfer['respond_amount'] = $settings['ia_respond_amount'];
+		}
+
+		$transfer['address'] = $tx['buyer_address'];	
+	
+			
+		//Check for a pending response for this incoming tx
+		$pending_response = $this->processModel->checkForResponseById($tx['id']);
+		if($pending_response !==false){
+			//Found a previous repsonse, use that instead of a new one (in case of double response we want the same confirmation number for address submission)
+			$transfer['out_message'] = $pending_response['out_message'];
+			$unique_identifier = $pending_response['out_message'];
+		}
+			
+		$transfer_object=(object)$transfer;
+		//update unprocessed array
+		$tx['ia_comment'] = $settings['ia_comment'];
+		$tx['respond_amount'] = $transfer['respond_amount'];
+		$tx['out_message'] = $transfer['out_message'];
+		$tx['out_message_uuid'] = $settings['out_message_uuid'];
+		$tx['uuid'] = $unique_identifier;
+		$tx['api_url'] = $settings['api_url'];
+		$tx['out_scid']=$transfer['scid'];
+		$tx['crc32'] = ($unique_identifier == ''?1:crc32($unique_identifier));//not really required for token xfers...
+		$tx['type'] = "sc_sale";
+	
+		return (object)["tx"=>$tx,"xfer"=>$transfer_object];
+	}
+
+
+	public function createRefundSCTransfer(&$tx,$settings){	
+		//No mathcing products / I. Addresses found
+		//Send Refund to buyer
+		
+		$transfer['respond_amount'] = $tx['amount'];
+		$transfer['address'] = $tx['buyer_address'];	
+		$transfer['out_message'] =  "Integrated Address for S.C. Inactive.";	
+		$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";
+		$transfer_object=(object)$transfer;	
+		//update unprocessed array
+		$tx['respond_amount'] =  $tx['amount'];
+		$tx['out_message'] = $transfer['out_message'];				
+		$tx['out_message_uuid'] = '';
+		$tx['uuid'] = '';
+		$tx['api_url'] = '';
+		$tx['out_scid']=$transfer['scid'];
+		$tx['crc32'] = '';
+		$tx['type'] = "sc_refund";
+
+		return (object)["tx"=>$tx,"xfer"=>$transfer_object];
+	}
+
+
+
+
+
+	
 }
 
 
