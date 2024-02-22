@@ -297,12 +297,10 @@ class Process extends App {
 				}
 				$transfer=[];
 				$successful=false;
-				if($settings !== false){
-					if($tx['successful'] == 1){
-						$successful = true;
-					}				
+				if($settings !== false){					
+					$successful = $tx['successful'];								
 				}
-				
+			
 				if($successful==1){
 					//Is a smart contract token transfer...				
 					//Send Response to buyer
