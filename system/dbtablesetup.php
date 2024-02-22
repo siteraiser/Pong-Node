@@ -50,6 +50,7 @@ CREATE TABLE incoming (
 	amount int(25) unsigned,
 	port smallint(6) NULL,
 	for_product_id smallint(6) NULL,
+	for_ia_id smallint(6) NULL,
 	product_label varchar(150) NULL,
 	successful tinyint(1) DEFAULT 0,	
 	processed tinyint(1) DEFAULT 0,
