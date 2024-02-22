@@ -203,6 +203,7 @@ class processModel extends App {
 			amount,
 			port,
 			for_product_id,
+			for_ia_id,
 			product_label,
 			successful,
 			processed,
@@ -210,7 +211,7 @@ class processModel extends App {
 			time_utc
 			)
 			VALUES
-			(?,?,?,?,?,?,?,?,?,?)
+			(?,?,?,?,?,?,?,?,?,?,?)
 			';	
 		
 		$array=array(
@@ -219,6 +220,7 @@ class processModel extends App {
 			$tx->amount,
 			$tx->port,
 			$tx->for_product_id,
+			($p_and_ia_ids ===false?null:$p_and_ia_ids['ia']),			
 			$tx->product_label,
 			($p_and_ia_ids ===false?0:1),
 			0,
@@ -342,15 +344,28 @@ class processModel extends App {
 		}
 	}
 
+	function markIncSuccessfulTwo($inc_id){
+		//For failed token transfers (error of not enough etc)
+		$result =$this->pdo->query("UPDATE incoming SET successful = '2' WHERE id ='$inc_id'");
+		if($result !== false && $result->rowCount() > 0){		
+			return true;
+		}else{	
+			return false;
+		}
+	}
+
+
+
+
 	function getConfirmedInc($txid){
 
 		$stmt=$this->pdo->prepare("
-		SELECT *, i_addresses.id AS ia_id, responses.out_message AS response_out_message FROM responses 
+		SELECT *, responses.out_message AS response_out_message FROM responses 
 		INNER JOIN incoming ON responses.incoming_id = incoming.id 
-		RIGHT JOIN i_addresses ON incoming.amount = i_addresses.ask_amount 
-		RIGHT JOIN products ON i_addresses.product_id = products.id 
-		WHERE incoming.for_product_id = i_addresses.product_id AND incoming.amount = i_addresses.ask_amount AND incoming.port = i_addresses.port AND responses.txid = ?
+		RIGHT JOIN products ON incoming.for_product_id = products.id 
+		WHERE responses.txid =  ?
 		");
+		
 		$stmt->execute([$txid]);		
 		if($stmt->rowCount()==0){
 			return [];
