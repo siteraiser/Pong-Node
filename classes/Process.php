@@ -97,7 +97,7 @@ class Process extends App {
 					if($record['for_ia_id'] != ''){
 						$this->editProductModel->toggleIAddr($record['for_ia_id'],0);
 						//Send update through web api.
-						$ia = $this->productModel->getIAddressById($record['ia_id']);
+						$ia = $this->productModel->getIAddressById($record['for_ia_id']);
 						$this->webApiModel->submitIAddress($ia);
 						
 						$product_changes = true;
