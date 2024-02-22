@@ -93,6 +93,7 @@ input[name="label"],
 textarea[name="details"],
 input[name="comment"],
 input[name="out_message"],
+input[name="api_url"],
 input[name="scid"]{
 	width:100%;
 }
@@ -195,10 +196,17 @@ div.tip{
 		<label>Out Message (max 128b) <span class="info out_message_info">i</span>
 			<input id="out_message" name="out_message" type="text" maxlength="128">
 		</label>
-		Only Use UUID <input id="add_out_message_uuid" name="out_message_uuid" type="checkbox" > <span class="info out_message_uuid_info">i</span>
+		<div class="uuid">
+		Use UUID <input id="add_out_message_uuid" name="out_message_uuid" type="checkbox" > <span class="info out_message_uuid_info">i</span>
+		</div>
+		<label>Api Url <span class="info api_url_info">i</span>
+			<input id="api_url" name="api_url" type="text" maxlength="128">
+		</label>
+		
 		<label>Ask Amount (atomic units)
 			<input id="ask_amount" class="atomic_units dero" name="ask_amount" type="number" step="1"><span class="token_units"></span>
 		</label>
+		
 		<label>SCID <span class="info scid_info">i</span>
 			<input id="scid" name="scid" type="text" >
 		</label>
@@ -246,8 +254,12 @@ div.tip{
 		<label>Out Message (max 128b) <span class="info out_message_info">i</span>
 			<input id="edit_out_message" name="out_message" type="text" maxlength="128">
 		</label>
-		Only Use UUID <input id="out_message_uuid" name="out_message_uuid" type="checkbox" > <span class="info out_message_uuid_info">i</span>
-		
+		<div class="uuid">
+		Use UUID <input id="edit_out_message_uuid" name="out_message_uuid" type="checkbox" > <span class="info out_message_uuid_info">i</span>
+		</div> 
+		<label>Api Url <span class="info api_url_info">i</span>
+			<input id="api_url" name="api_url" type="text" maxlength="128">
+		</label>
 		<label>Ask Amount (atomic units)
 			<input id="ask_amount" class="atomic_units dero" name="ask_amount" type="number" step="1"><span class="token_units"></span>
 		</label>
@@ -536,19 +548,35 @@ show_transactions_button.addEventListener("click", (event) => {
 })
 
 
-
+var add_out_message_uuid = document.getElementById('add_out_message_uuid');
+var edit_out_message_uuid = document.getElementById('edit_out_message_uuid');
 /* form validation */
-function getStringSize(){
+function getStringSize(event){ 
+	let test = '';
+	let addon = '';
+	if(event.target.id == 'out_message' || event.target.id == 'add_out_message_uuid' || event.target.id == 'p_type'){
+		test = document.getElementById('out_message');
+		if(add_out_message_uuid.checked){
+			addon = '550e8400-e29b-41d4-a716-446655440000';	
+		}
+	}else
+	if(event.target.id == 'edit_out_message' || event.target.id == 'edit_out_message_uuid' || event.target.id == 'edit_p_type'){
+		test = document.getElementById('edit_out_message');
+		if(edit_out_message_uuid.checked){
+			addon = '550e8400-e29b-41d4-a716-446655440000';		
+		}		
+	}
 	 
-	let size =  new Blob([event.target.value]).size;
-	
+	let size =  new Blob([test.value + addon]).size;
+
 	if(size > 128){
-		event.target.classList.add("warning");
+		test.classList.add("warning");
 	}else{
-		event.target.classList.remove("warning");
+		test.classList.remove("warning");
 	}
 }
-
+add_out_message_uuid.addEventListener('click', getStringSize, false);
+edit_out_message_uuid.addEventListener('click', getStringSize, false);
 out_messages.forEach((input) => {
 input.addEventListener('input', getStringSize, false);
 input.addEventListener('keyup', getStringSize, false);
@@ -591,7 +619,7 @@ typeSelect('','general');
 //input[value="physical"] ~ input#scid{display:none;}
 p_type.addEventListener("change", typeSelect );
 
-edit_p_type.addEventListener("change", typeSelect );
+edit_p_type.addEventListener("change", typeSelect,getStringSize );
 
 
 
@@ -609,46 +637,49 @@ function typeSelect(data,stored_value=''){
 	
 	var modal;
 	if(id=='p_type'){
-		modal = add_product_modal;
-		modal.querySelectorAll('label').forEach((label) => {
-			label.classList.remove("hidden");
-		});
+		modal = add_product_modal;		
 	}else if(id=='edit_p_type'){
 		modal = edit_product_modal;
-		modal.querySelectorAll('label').forEach((label) => {
-			label.classList.remove("hidden");
-		});
 	}
-
+	modal.querySelector('div.uuid').classList.remove("hidden");
+	modal.querySelectorAll('label').forEach((label) => {
+		label.classList.remove("hidden");
+	});
+	
 	if(value == "general"){
 		modal.querySelector('input[name="out_message"]').placeholder='';	
 	}	
 	if(value == "physical"){	
 		hideSCIDFields(id,modal);
-		modal.querySelector('input[name="out_message"]').placeholder='Api Url, sends uuid to website';
+		modal.querySelector('input[name="out_message"]').placeholder='Leave blank or UUID will be appended (Use UIID must be selected for shipping info)';
 		
 		if(api_url=='https://ponghub.com/papi'){
 			modal.querySelector('input[name="out_message"]').placeholder='Register website with api url in settings';
 		}
-		
 		modal.querySelector('input[name="out_message_uuid"]').checked =true;	
+		
+		modal.querySelector('input[name="api_url"]').placeholder='API URL to send UUID to if Use UUID is checked';
 		if(id == 'p_type'){
-			modal.querySelector('input[name="out_message"]').value = api_url;
+			//modal.querySelector('input[name="api_url"]').value = api_url;
 		}
 	}
 	if(value == "digital"){
 		hideSCIDFields(id,modal);
-		modal.querySelector('input[name="out_message"]').placeholder='Link to E-Goods (https://news.com/eg1)';
+		modal.querySelector('input[name="out_message"]').placeholder='Link to E-Goods (https://news.com/eg1) or (https://news.com/eg?id=UUID)';
+		modal.querySelector('input[name="api_url"]').placeholder='API URL to send UUID to if Use UUID is checked';
 		if(id == 'p_type'){
-			modal.querySelector('input[name="out_message"]').value ='';
-			modal.querySelector('input[name="out_message_uuid"]').checked =false;
+			modal.querySelector('input[name="out_message"]').value ='';				
+			modal.querySelector('input[name="api_url"]').value ='';
 		}
 	}
-	if(value == "token"){
+	if(value == "token"){		
+		hideUUIDField(id,modal);
+		hideAPIURLFields(id,modal);
 		modal.querySelector('input[name="out_message"]').placeholder='Blank for SCID or add custom message';
 		if(id == 'p_type'){
 			modal.querySelector('input[name="out_message"]').value ='';
 			modal.querySelector('input[name="out_message_uuid"]').checked =false;
+			modal.querySelector('input[name="api_url"]').value ='';
 		}
 	}	
 	
@@ -666,8 +697,14 @@ function hideSCIDFields(id,modal){
 		});		
 	}
 }
-
-
+function hideAPIURLFields(id,modal){
+	modal.querySelector('input[name="api_url"]').value = '';
+	modal.querySelector('input[name="api_url"]').parentElement.classList.add("hidden");
+}
+function hideUUIDField(id,modal){
+	modal.querySelector('input[name="out_message_uuid"]').checked =false;
+	modal.querySelector('input[name="out_message_uuid"]').parentElement.classList.add("hidden");
+}
 /**********************/
 /* Information / Help */
 /**********************/
@@ -680,13 +717,13 @@ function showInfo(event){
 		if(event.target.classList.contains('out_message_info')){
 			showing_tip = true;
 			
-			message = 'For durable goods use this field to specify an api url to send the uuid to. ';
+			message = 'For durable goods check "Use UUID" to ensure that the shipping info can be supplied. ';
 			let text = document.createTextNode(message);
 			div.appendChild(text);
 			let hr = document.createElement('hr');
 			div.appendChild(hr);
 			
-			message = 'For E-Products use this field for a link to reedeem the product. ';
+			message = 'For E-Products use this field for a link to reedeem the product. You can supply a url to append the UUID to if Use UUID is checked.';
 			text = document.createTextNode(message);
 			div.appendChild(text);
 			hr = document.createElement('hr');
@@ -698,9 +735,14 @@ function showInfo(event){
 			
 		}else if(event.target.classList.contains('out_message_uuid_info')){
 			showing_tip = true;
-			message = 'When selected it will generate a uuid and send it to the buyer and to the api link if provided in the "out message" (for durable goods).';
+			message = 'When selected it will generate a uuid and send it to the buyer and to the api link if provided. If a url or custom message is supplied in the out message, the UUID will be appended to the end if checked.';
 			text = document.createTextNode(message);
 			div.appendChild(text);
+		}else if(event.target.classList.contains('api_url_info')){
+			showing_tip = true;
+			message = 'Specify an api end point url to send the uuid to when new transactions are confirmed';
+			text = document.createTextNode(message);
+			div.appendChild(text);			
 		}else if(event.target.classList.contains('scid_info')){
 			showing_tip = true;
 			message = 'SCIDs here will be inherited by all blank integrated addresses below. This can be left blank or overridden by supplying scids at the I.A. level.';
@@ -783,7 +825,7 @@ function generateProduct(product) {
 	}
 	div.appendChild(createSection("Respond Amount: " + product.respond_amount + " - (" + niceRound( product.respond_amount * .00001) + " "+unit_of_account+") - Applies to all I. Addrs. for this product"));	
 	div.appendChild(createSection("Out Message: " + (product.out_message_uuid ==1 ? "UUID - "+ product.out_message:product.out_message) + " - Applies to all I. Addrs. for this product"));
-
+	div.appendChild(createSection("Api Url: " +product.api_url));	
 
 	var iaddresses = document.createElement('div');
 	iaddresses.appendChild(createSection("Integrated Addresses"));
@@ -1007,7 +1049,8 @@ function editProducts(pid) {
 	
 	edit_product_modal.querySelector("#edit_out_message").classList.remove("warning");
 	edit_product_modal.querySelector("#edit_out_message").value = editing.out_message;	
-	edit_product_modal.querySelector("#out_message_uuid").checked = (editing.out_message_uuid == 1? true:false);	
+	edit_product_modal.querySelector("#edit_out_message_uuid").checked = (editing.out_message_uuid == 1? true:false);	
+	edit_product_modal.querySelector("#api_url").value = editing.api_url;	
 	
 	edit_product_modal.querySelector("#edit_scid").value = editing.scid;	
 	
