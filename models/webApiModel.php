@@ -88,6 +88,7 @@ class webApiModel extends App{
 	function logRequest($url,$jsontxt,$error,$method,$applicable_id){
 		//make sure seller has an account setup
 		if($this->id==''){return false;}
+		//Save request and error
 		if($error !=''){
 			$query='INSERT INTO pending (
 				url,
@@ -187,14 +188,14 @@ class webApiModel extends App{
 	
 	//Sends new transaction to a website when uuid is selected and the out_message contains the url (as of now...)
 	function newTX($tx){
-		$url = $tx['out_message'];
+		$url = $tx['api_url'];
 		if(!filter_var($url, FILTER_VALIDATE_URL)){
 			return false;
 		}
 		$data = '{
 			"method": "newTX",
 			"params": {
-				"uuid": "'.$tx['response_out_message'].'"
+				"uuid": "'.$tx['uuid'].'"
 			}
 		}';
 
