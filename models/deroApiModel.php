@@ -48,7 +48,7 @@ class deroApiModel extends App{
 
 
 
-	//Gets the list of incoming transfers
+	//Gets wallet address
 	function getAddress(){
 
 	$data = '{
@@ -78,6 +78,39 @@ class deroApiModel extends App{
 		return $output;
 
 	}
+	
+	//Gets the block height
+	function getHeight(){
+
+	$data = '{
+    "jsonrpc": "2.0",
+    "id": "1",
+    "method": "GetHeight"
+	}';
+
+	$json = json_decode($data,true);
+	$json = json_encode($json);
+
+		$ch = curl_init("http://{$this->ip}:{$this->port}/json_rpc");
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS,$json);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [ 		
+			"Authorization: Basic " . base64_encode($this->user.':'.$this->pass),
+			"Content-Type: application/json"
+		]);
+
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+		$output = curl_exec($ch);
+		
+		$this->connectionErrors($ch);
+
+		curl_close($ch);
+
+		return $output;
+
+	}	
+	
+	
 
 
 	//Gets the list of incoming transfers
