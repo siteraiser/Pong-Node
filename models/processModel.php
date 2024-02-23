@@ -261,6 +261,9 @@ class processModel extends App {
 		if($has_r === false){
 			return false;
 		}
+		
+		$tx['for_product_id'] = 0;
+		$tx['product_label'] = 'Inactive I.A.';
 		//Determine product id and current label
 		$ia_settings = $this->getIAsettings($tx);
 		if($ia_settings!==false){
@@ -275,7 +278,7 @@ class processModel extends App {
 	//check responses to ensure they went through, if not mark as not processed 
 	function unConfirmedTxs(){
 
-		$stmt=$this->pdo->prepare("SELECT DISTINCT txid,txids,time_utc FROM responses WHERE confirmed = '0'");
+		$stmt=$this->pdo->prepare("SELECT DISTINCT txid,txids,time_utc,t_block_height FROM responses WHERE confirmed = '0'");
 		$stmt->execute([]);		
 		if($stmt->rowCount()==0){
 			return [];
@@ -432,9 +435,7 @@ class processModel extends App {
 	}
 
 	function updateResponseTX($response){
-		$given = new DateTime();
-		$given->setTimezone(new DateTimeZone("UTC"));
-		$time_utc = $given->format("Y-m-d H:i:s");
+		
 		
 		//Add to list of txns
 		$responseTXIDS = $this->getRespsonseTXIDS($response->incoming_id);		
@@ -446,14 +447,16 @@ class processModel extends App {
 		$query='UPDATE responses SET 
 			txid=:txid,
 			txids=:txids,
-			time_utc=:time_utc
+			time_utc=:time_utc,
+			t_block_height=:t_block_height
 			WHERE incoming_id=:incoming_id';	
 		
 		$stmt=$this->pdo->prepare($query);
 		$stmt->execute(array(
 			':txid'=>$response->txid,
 			':txids'=>$responseTXIDS,
-			':time_utc'=>$time_utc,
+			':time_utc'=>$response->time_utc,
+			':t_block_height'=>$response->t_block_height,
 			':incoming_id'=>$response->incoming_id));				
 					
 		if($stmt->rowCount()==0){
@@ -496,10 +499,11 @@ class processModel extends App {
 			api_url,
 			out_scid,
 			crc32,
-			time_utc
+			time_utc,
+			t_block_height
 			)
 			VALUES
-			(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+			(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 			';	
 		
 		$array=array(
@@ -516,7 +520,8 @@ class processModel extends App {
 			$response->api_url,
 			$response->out_scid,
 			$response->crc32,
-			$response->time_utc
+			$response->time_utc,
+			$response->t_block_height
 			);				
 				
 		$stmt=$this->pdo->prepare($query);
