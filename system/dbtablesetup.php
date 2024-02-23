@@ -78,6 +78,7 @@ CREATE TABLE responses (
 	ship_address varchar(144) NULL,
 	confirmed tinyint(1) DEFAULT 0,
 	time_utc timestamp NULL,
+	t_block_height int(15),
 	lastupdate timestamp DEFAULT CURRENT_TIMESTAMP,
 	PRIMARY KEY (id)
 ) ENGINE=InnoDB;
