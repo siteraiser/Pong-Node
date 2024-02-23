@@ -29,6 +29,16 @@ class Process extends App {
 		/** Check if pending response **/
 		/** transfers have confirmed  **/
 		/*******************************/
+		$t_block_height='';
+		$result_str = $this->deroApiModel->getHeight();
+		$heightRes = json_decode($result_str);
+		if(!isset($heightRes->errors) && isset($heightRes->result)){	
+			$t_block_height = $heightRes->result->height;	
+			--$t_block_height;
+		}		
+				
+		
+		
 		$given = new DateTime();
 		$given->setTimezone(new DateTimeZone("UTC"));	
 		$given->modify('-36 seconds');//Ensure that one block has passed...
@@ -40,8 +50,9 @@ class Process extends App {
 		//go through the responses that haven't been confirmed.
 		//keep old txids in a csv and check if any of those have confirmed, if so update the txid with the first one that confirms... 
 		foreach($unConfirmed as $response){
+			
 			//make sure the response is at least one block old before checking.
-			if($response['time_utc'] < $time_utc){
+			if($response['time_utc'] < $time_utc && $response['t_block_height'] < $t_block_height){
 				$confirmed = false;
 				$alltxids=[];
 				$alltxids= explode(",",$response['txids']);
@@ -173,14 +184,16 @@ class Process extends App {
 		foreach($notProcessed as &$tx){
 			
 			$settings = $this->processModel->getIAsettings($tx);
-			if($settings['scid'] != ''){
-				continue 1;
-			}else if($settings['ia_scid'] != ''){
-				continue 1;
-			}
-			$transfer=[];
+
 			$successful=false;
 			if($settings !== false){
+				//filter out scid token transfers
+				if($settings['scid'] != ''){
+					continue 1;
+				}else if($settings['ia_scid'] != ''){
+					continue 1;
+				}
+				//Enusre it was a successful incoming transaction.
 				if($tx['successful'] == 1){
 					$successful = true;
 				}				
@@ -193,6 +206,9 @@ class Process extends App {
 				$transfer_list[] = $xfer->xfer;
 
 			}else{
+				
+				
+				
 				//No mathcing products / I. Addresses found
 				//Send Refund to buyer
 				$xfer = $this->createRefundTransfer($tx,$settings);
@@ -209,17 +225,46 @@ class Process extends App {
 		/** Combine Regular Product Transfers **/
 		/***************************************/
 		$responseTXID='';
+		$t_block_height ='';
 		/* Does combined transfers, scid transfers may require separate transfers in case of refund required...
 		*/
 		if(!empty($transfer_list)){
-						
-			$payload_result = $this->deroApiModel->transfer($transfer_list);
-			$payload_result = json_decode($payload_result);
+			//Make sure wallet is working
+			$result_str = $this->deroApiModel->getHeight();
+			$heightRes = json_decode($result_str);
+			if(!isset($heightRes->errors) && isset($heightRes->result)){	
+				$t_block_height = $heightRes->result->height;	
+			}			
+			
+			$payload_result =null;
+			if(is_int($t_block_height)){
+				
+				
+
+				//try the transfer
+				$payload_result = $this->deroApiModel->transfer($transfer_list);
+				$payload_result = json_decode($payload_result);
+				
+				//Get the actual blockheight or just increment by 1 if it fails since we need to have a height to check for confimation
+				$tbh = '';
+				$result_str = $this->deroApiModel->getHeight();
+				$heightRes = json_decode($result_str);
+				if(!isset($heightRes->errors) && isset($heightRes->result)){	
+					$tbh = $heightRes->result->height;							
+				}					
+				if(is_int($tbh)){
+					$t_block_height = $heightRes->result->height;	
+				}else{
+					++$t_block_height;
+				}		
+			}
+				
 
 			if($payload_result != null && isset($payload_result->result)){
 				$responseTXID = $payload_result->result->txid;
+					
 			}else{
-				if($payload_result->error){
+				if(isset($payload_result->error)){
 					$errors[] = "Error: ".$payload_result->error->message;
 				}else{
 					$errors[] = "Unkown Transfer Error";
@@ -264,7 +309,8 @@ class Process extends App {
 					"api_url"=>$tx['api_url'],
 					"out_scid"=>$tx['out_scid'],
 					"crc32"=>$tx['crc32'],
-					"time_utc"=>$time_utc
+					"time_utc"=>$time_utc,
+					"t_block_height"=>$t_block_height,
 					];
 					
 					
@@ -292,13 +338,17 @@ class Process extends App {
 					break;
 				}
 				$settings = $this->processModel->getIAsettings($tx);	
-				if($settings['scid'] == '' && $settings['ia_scid'] == ''){
-					continue 1;
-				}
-				$transfer=[];
+
 				$successful=false;
-				if($settings !== false){					
+				if($settings !== false){	
+					//Make sure it is a token sale...
+					if($settings['scid'] == '' && $settings['ia_scid'] == ''){
+						continue 1;
+					}
 					$successful = $tx['successful'];								
+				}else{
+					//should be handled in regular
+					continue 1;
 				}
 			
 				if($successful==1){
@@ -328,8 +378,36 @@ class Process extends App {
 				
 			
 				$responseTXID='';
-				$payload_result = $this->deroApiModel->transfer([$sc_transfer]);
-				$payload_result = json_decode($payload_result);
+				$t_block_height='';
+					
+				//Make sure wallet is working
+				$result_str = $this->deroApiModel->getHeight();
+				$heightRes = json_decode($result_str);
+				if(!isset($heightRes->errors) && isset($heightRes->result)){	
+					$t_block_height = $heightRes->result->height;	
+				}			
+				
+				$payload_result =null;
+				if(is_int($t_block_height)){
+					//try the transfer
+					$payload_result = $this->deroApiModel->transfer([$sc_transfer]);
+					$payload_result = json_decode($payload_result);
+					
+					//Get the actual blockheight or just increment by 1 if it fails since we need to have a height to check for confimation
+					$tbh = '';
+					$result_str = $this->deroApiModel->getHeight();
+					$heightRes = json_decode($result_str);
+					if(!isset($heightRes->errors) && isset($heightRes->result)){	
+						$tbh = $heightRes->result->height;							
+					}					
+					if(is_int($tbh)){
+						$t_block_height = $heightRes->result->height;	
+					}else{
+						++$t_block_height;
+					}		
+				}
+			
+				
 				$sent_one = true;
 				if($payload_result != null && isset($payload_result->result)){
 					
@@ -371,7 +449,8 @@ class Process extends App {
 						"api_url"=>$tx['api_url'],
 						"out_scid"=>$tx['out_scid'],
 						"crc32"=>$tx['crc32'],
-						"time_utc"=>$time_utc
+						"time_utc"=>$time_utc,
+						"t_block_height"=>$t_block_height
 						];
 						
 						
