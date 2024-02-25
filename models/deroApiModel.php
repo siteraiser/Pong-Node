@@ -266,7 +266,7 @@ class deroApiModel extends App{
 	}
 	/*********************************************************************/
 	/* Creates a transfer to respond to new sales (destination address). */ 
-	/* Transfers can transfer a SCID (not setup for that currently).     */
+	/* Transfers can transfer tokens of provided SCID instead of Dero    */
 	/* 128 bytes max for the out message (link or uuid etc).             */
 	/* Amount should be at least .00001 dero or 1 deri.                  */
 	/*********************************************************************/
