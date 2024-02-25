@@ -142,7 +142,9 @@ class processModel extends App {
 			$temp = explode("$",$part);
 			$address_array[current($temp)]=end($temp);
 		}
-		
+		if(!isset($address_array['id'])){
+			return false;
+		}
 		return $this->saveAddress($entry->txid,$address_array['id']);
 		
 	}
