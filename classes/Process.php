@@ -178,7 +178,7 @@ class Process extends App {
 			}
 			
 			foreach($filtered as $latest_submission){
-				//It is an address submission possibly
+				//Seems to be an address submission, update response record in db
 				$saved = $this->processModel->saveAddress($latest_submission);
 				if($saved !== false){
 					$messages[] = "Shipping address submitted by buyer.";
