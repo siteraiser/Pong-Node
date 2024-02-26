@@ -120,12 +120,11 @@ class Process extends App {
 
 
 
-		
 		/******************************/
 		/** Check incoming transfers **/
 		/** for new sales            **/
 		/******************************/
-
+		$address_submission_candidates=[];
 		//Get transfers and save them if they are new and later than the db creation time.	
 		$export_transfers_result = $this->deroApiModel->getTransfers();
 		$export_transfers_result = json_decode($export_transfers_result);
@@ -145,7 +144,7 @@ class Process extends App {
 						//check type of inventory update... product or iaddress
 						if($p_and_ia_ids !== false){
 							$product_changes = true;
-							//set changes to true to reload the products
+							//set chenges to true to reload the products
 							if($p_and_ia_ids['id_type'] == 'p'){
 								$this->webApiModel->submitProduct($this->productModel->getProductById($p_and_ia_ids['p']));	
 								//$return_actions['inv_pids'][]=$p_and_ia_ids['p'];
@@ -156,16 +155,45 @@ class Process extends App {
 							}
 						}
 					}else{
-							
-						//It is an address submission possibly
-						$saved = $this->processModel->addressSubmission($entry);
-						if($saved !== false){
-							$messages[] = "Shipping address submitted by buyer.";
-						}
+						$address_submission_candidates[]=$entry;	
+						
 					}
 				}
 			}
 		}	
+			
+		$address_arrays=[];
+		//Now do address submissions since old address submissions need to be filtered out first.
+		if(!empty($address_submission_cadidates){
+			foreach($address_submission_candidates as $entry){
+				foreach($entry->payload_rpc as $payload){
+					if($payload->name == "C" && $payload->datatype == "S"){
+						$address_string = $payload->value;
+						$res = $this->processModel->getAddressArray($entry);	
+						if($res !==false){
+							$address_arrays[] = $res;
+						}						
+					}				
+				}
+				
+			}
+			
+			$filtered = [];
+			foreach($address_arrays as $address){				
+				$filtered[$address['id']] = $address;	
+			}
+			
+			foreach($filtered as $latest_submission){
+				//It is an address submission possibly
+				$saved = $this->saveAddress($latest_submission);
+				if($saved !== false){
+					$messages[] = "Shipping address submitted by buyer.";
+				}
+			}	
+			
+			
+		}
+
 			
 
 		//Make array of unprocessed transactions
