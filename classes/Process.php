@@ -164,7 +164,7 @@ class Process extends App {
 			
 		$address_arrays=[];
 		//Now do address submissions since old address submissions need to be filtered out first.
-		if(!empty($address_submission_cadidates){
+		if(!empty($address_submission_cadidates)){
 			foreach($address_submission_candidates as $entry){
 				foreach($entry->payload_rpc as $payload){
 					if($payload->name == "C" && $payload->datatype == "S"){
