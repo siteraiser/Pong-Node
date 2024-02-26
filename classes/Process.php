@@ -161,7 +161,8 @@ class Process extends App {
 				}
 			}
 		}	
-			
+
+		//Now do address submissions since old address submissions need to be filtered out first.
 		$address_arrays=[];
 		if(!empty($address_submission_candidates)){
 			foreach($address_submission_candidates as $entry){				
