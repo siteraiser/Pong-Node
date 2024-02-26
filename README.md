@@ -2,7 +2,7 @@ The Pong Server to be run at home to manage products and process transactions fo
 This is written in PHP and requires mysql or mariadb to run and is managed via ajax in a web browser.<br>
 
 
-<p>To install, create a database named pong and place the project files in your htdocs / root php folder. The example db user is root with no password. You need to open your engram wallet, enable the cyberdeck and set user as secret and password as pass then head to localhost and begin the registration process with a pong hub near you. After registered, you products will be automatically submitted to and listed on the website / hub marketplace (if there is inventory and status is set to true/active).
+<p>To install, create a database named pong and place the project files in your htdocs / root php folder. The example db user is root with no password. You need to open your engram wallet, enable the cyberdeck and set user as secret and password as pass then head to localhost, go to settings and begin the registration process with a pong hub near you (enter the webapi address and your dero username). After registered, your products will be automatically submitted to and listed on the website / hub marketplace (if there is inventory and status is set to true/active).
   </p>
 Currently 4 products types supported.<br>
 <ol>
