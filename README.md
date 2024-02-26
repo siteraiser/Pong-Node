@@ -29,8 +29,9 @@ After registering, the pong server will send a put message to the pong hub every
 <p>
 Roadmap: Maybe add support for smart contract ownership transfers if possible. Tidy up some user experience things like adding loading indicators and more safeguards. Add more features to the hub portion like reviews, search, categories, ranking algorithm and locations.
 </p>
-
-
+<p>
+Feel free to suggest, contribute, report bugs and all that good open source stuff!
+</p>
 <hr>
 There are some other versions of Pong Servers available for running indenpendent of this project.<br>
 The Pong Server Example from the Dero Project Written in GoLang by Captain Dero: https://github.com/deroproject/derohe/blob/main/cmd/rpc_examples/pong_server/pong_server.go<br>
