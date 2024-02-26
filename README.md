@@ -16,7 +16,7 @@ The refund rules... If there are no matching integrated addresses for the incomi
 Currently and subject to change, when the address is submitted is only allowed to be submitted once per transaction. This may need to be addressed to allow shipping address updates for orders.
 </p>
 <p>
-Registering with the pong hub is a one time affair where upon registration a unique id is assigned to the user and used thereforth for all later product submissions / updates.
+Registering with the pong hub is a one time affair where upon registration a unique id is assigned to the user and used thereforth for all later product submissions / updates. You can update / remove your Dero user name at any time but need to use the same wallet address. 
 </p>
 <p>
 After registering, the pong server will send a put message to the pong hub every 5 minutes to maintain its listings. If a half hour goes by without a check-in then that seller's products will be removed from the storefront.
