@@ -2,13 +2,13 @@ The Pong Server to be run at home to manage products and process transactions fo
 This is written in PHP and requires mysql or mariadb to run and is managed via ajax in a web browser.<br>
 Currently 4 products types supported.<br>
 <ol>
-  <li>General: Not recommended for use, but reveals all of the options</li>
-   <li>Physical Goods: Requires a UUID to be generated and sent to the customer in the out message for shipping address submission</li>
+  <li>General: Not recommended for use, but reveals all of the options.</li>
+   <li>Physical Goods: Requires a UUID to be generated and sent to the customer in the out message for shipping address submission.</li>
      <li>Digital Goods: Provide a link to redeem the purchase or generate a UUID to append to the end of the link and optionally send the same UUID through the web api.</li>
        <li>Token Transfer: Requires a smart contract id for the token to be sent on purchase. If the token transfer fails it will send a refund to the buyer.</li>
 </ol>
 <p>
-The Pong Server inventory will check the product level inventory if specified will de-increment that first. If product level inventory is at 0 then it will see if there are Integrated Address level inventories and use those instead. If no inventory is found, a refund is issued.</p>
+The Pong Server inventory will check the product level inventory if specified will de-increment that first. If product level inventory is at 0 then it will see if there are Integrated Address level inventories and use those instead. If no inventory is found, a refund is issued. All inventory is updated immediately when a new transaction is detected and then sent to the website. Insufficient token fails set and send status to false after the confirmation (maybe could be done sooner).</p>
 <p>
 The refund rules... If there are no matching integrated addresses for the incoming transaction, or the status is set to false, the inventory is at 0 or the token transfer fails, a full refund for the order amount is issued automatically.
 </p>
