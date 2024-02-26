@@ -25,6 +25,10 @@ Registering with the pong hub is a one time affair where upon registration a uni
 <p>
 After registering, the pong server will send a put message to the pong hub every 5 minutes to maintain its listings. If a half hour goes by without a check-in then that seller's products will be removed from the storefront.
 </p>
+<br>
+<p>
+Road map: Maybe add support for smart contract ownership transfers if possible. Tidy up some user experience things, like adding loading indicators and more safeguards. Add more features to the hub portion like reviews, search, categories, ranking algorithm and locations.
+</p>
 
 
 <hr>
