@@ -145,7 +145,7 @@ class Process extends App {
 						//check type of inventory update... product or iaddress
 						if($p_and_ia_ids !== false){
 							$product_changes = true;
-							//set chenges to true to reload the products
+							//set changes to true to reload the products
 							if($p_and_ia_ids['id_type'] == 'p'){
 								$this->webApiModel->submitProduct($this->productModel->getProductById($p_and_ia_ids['p']));	
 								//$return_actions['inv_pids'][]=$p_and_ia_ids['p'];
@@ -202,7 +202,7 @@ class Process extends App {
 			if($successful){
 				//Was found and had enough inventory.
 				$xfer = $this->createTransfer($tx,$settings);
-				$tx = $xfer->tx;
+				$tx = $xfer->tx; //since it was passed in by reference passing it to $tx may not be required.
 				$transfer_list[] = $xfer->xfer;
 
 			}else{
@@ -245,7 +245,7 @@ class Process extends App {
 				$payload_result = $this->deroApiModel->transfer($transfer_list);
 				$payload_result = json_decode($payload_result);
 				
-				//Get the actual blockheight or just increment by 1 if it fails since we need to have a height to check for confimation
+				//Get the actual blockheight or just increment by 1 if it fails since we need to have a height to check for confirmation
 				$tbh = '';
 				$result_str = $this->deroApiModel->getHeight();
 				$heightRes = json_decode($result_str);
@@ -275,12 +275,10 @@ class Process extends App {
 
 		if(empty($errors) && $responseTXID !== ''){
 			foreach($notProcessed as $tx){
-				//
-				///check this!!
+				
 				//Not set, not a regular product...
-				if(! isset($tx['out_scid'])){
-					continue 1;
-					//
+				if(! isset($tx['out_scid'])){ //actually should always be set by now in theory.
+					continue 1;					
 				}else{
 					if(!($tx['type'] == 'sale' || $tx['type'] == 'refund') ){
 						continue 1;
