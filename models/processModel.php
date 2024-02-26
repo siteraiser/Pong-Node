@@ -57,56 +57,25 @@ class processModel extends App {
 	
 	
 	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 	function saveAddress($txid,$id){
-		
-		$stmt=$this->pdo->prepare("SELECT id,ship_address FROM responses WHERE crc32 = ? AND (ship_address IS NULL OR ship_address = '')");
+		//Find latest matching crc32 and update address
+		$stmt=$this->pdo->prepare("SELECT id,ship_address FROM responses WHERE crc32 = ? ORDER BY id DESC LIMIT 1"); //AND (ship_address IS NULL OR ship_address = '')
 		$stmt->execute([$id]);		
 		if($stmt->rowCount()==0){
 			return false;
 		}
-		
-		/*
-		$ship_address = $address_array['n'].PHP_EOL;
-		$ship_address .= $address_array['l1'].PHP_EOL;
-		$ship_address .= $address_array['l2'].PHP_EOL;
-		$ship_address .= $address_array['c1'].PHP_EOL;
-		$ship_address .= $address_array['s'].PHP_EOL;
-		$ship_address .= $address_array['z'].PHP_EOL;
-		$ship_address .= $address_array['c2'].PHP_EOL;		
-		
-		$query='UPDATE responses SET 
-			ship_address=:ship_address
-			WHERE crc32=:crc32';	
-		
-		$stmt=$this->pdo->prepare($query);
-		$stmt->execute(array(
-			':ship_address'=>$ship_address,
-			':crc32'=>$address_array['id']));				
-					
-		if($stmt->rowCount()==0){
-			return false;
-		}		
-		*/
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 		
 		
 		$query='UPDATE responses SET 
 			ship_address=:ship_address
-			WHERE crc32=:crc32';	
+			WHERE crc32=:crc32 AND id=:id';	
 		
 		$stmt=$this->pdo->prepare($query);
 		$stmt->execute(array(
 			':ship_address'=>$txid,
-			':crc32'=>$id));				
+			':crc32'=>$id,
+			':id'=>$row['id']));				
 					
 		if($stmt->rowCount()==0){
 			return false;
@@ -115,6 +84,7 @@ class processModel extends App {
 		
 		return true;
 	}
+	
 	function addressSubmission($entry){
 		$address_string ='';
 		//Find buyer address in payload
