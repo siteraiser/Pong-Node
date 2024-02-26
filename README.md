@@ -17,7 +17,7 @@ The Pong Server inventory will check the product level inventory if specified wi
 The refund rules... If there are no matching integrated addresses for the incoming transaction, or the status is set to false, the inventory is at 0 or the token transfer fails, a full refund for the order amount is issued automatically.
 </p>
 <p>
-Currently and subject to change, when the address is submitted is only allowed to be submitted once per transaction. This may need to be addressed to allow shipping address updates for orders.
+Currently and subject to change, when the address is submitted is only allowed to be submitted once per transaction. This may need to be addressed to allow shipping address updates for orders but keeps the possibility of a crc32 collision to a minimum.
 </p>
 <p>
 Registering with the pong hub is a one time affair where upon registration a unique id is assigned to the user and used thereforth for all later product submissions / updates. You can update / remove your Dero user name at any time but need to use the same wallet address. 
