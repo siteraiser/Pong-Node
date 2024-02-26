@@ -164,7 +164,7 @@ class Process extends App {
 			
 		$address_arrays=[];
 		//Now do address submissions since old address submissions need to be filtered out first.
-		if(!empty($address_submission_cadidates)){
+		if(!empty($address_submission_candidates)){
 			foreach($address_submission_candidates as $entry){
 				foreach($entry->payload_rpc as $payload){
 					if($payload->name == "C" && $payload->datatype == "S"){
@@ -185,7 +185,7 @@ class Process extends App {
 			
 			foreach($filtered as $latest_submission){
 				//It is an address submission possibly
-				$saved = $this->saveAddress($latest_submission);
+				$saved = $this->processModel->saveAddress($latest_submission);
 				if($saved !== false){
 					$messages[] = "Shipping address submitted by buyer.";
 				}
