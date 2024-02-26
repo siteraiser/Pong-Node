@@ -27,7 +27,7 @@ After registering, the pong server will send a put message to the pong hub every
 </p>
 <br>
 <p>
-Road map: Maybe add support for smart contract ownership transfers if possible. Tidy up some user experience things, like adding loading indicators and more safeguards. Add more features to the hub portion like reviews, search, categories, ranking algorithm and locations.
+Roadmap: Maybe add support for smart contract ownership transfers if possible. Tidy up some user experience things, like adding loading indicators and more safeguards. Add more features to the hub portion like reviews, search, categories, ranking algorithm and locations.
 </p>
 
 
