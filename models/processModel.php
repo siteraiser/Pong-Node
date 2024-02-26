@@ -58,14 +58,16 @@ class processModel extends App {
 	
 	
 	function saveAddress($txid,$id){
-		//Find latest matching crc32 and update address
+		
 		$stmt=$this->pdo->prepare("SELECT id,ship_address FROM responses WHERE crc32 = ? ORDER BY id DESC LIMIT 1"); //AND (ship_address IS NULL OR ship_address = '')
 		$stmt->execute([$id]);		
 		if($stmt->rowCount()==0){
 			return false;
 		}
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
-		
+		if($row['ship_address'] == $txid){
+			return false;
+		}
 		
 		$query='UPDATE responses SET 
 			ship_address=:ship_address
