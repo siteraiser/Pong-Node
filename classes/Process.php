@@ -44,7 +44,7 @@ class Process extends App {
 		$given->modify('-36 seconds');//Ensure that one block has passed...
 		$time_utc = $given->format("Y-m-d H:i:s");
 		
-		$unConfirmed = $this->processModel->unConfirmedTxs();
+		$unConfirmed = $this->processModel->unConfirmedResponses();
 
 		$confirmed_txns=[];
 		//go through the responses that haven't been confirmed.
@@ -82,16 +82,17 @@ class Process extends App {
 				
 				if(!$confirmed){
 					//set the incoming to not processed, keep response record.
-					$this->processModel->markIncAsNotProcessed($response['txid']);	
+					$this->processModel->markOrderAsPending($response['txid']);	
 				}
 			}
 		}
 
 		foreach($confirmed_txns as $txid){
 			//Get record for freshly confirmed transfer with txid
-			$confirmed_incoming = $this->processModel->getConfirmedInc($txid);
+			$confirmed_incoming= $this->processModel->getConfirmedInc($txid);
 
 			foreach($confirmed_incoming as $record){
+				//does not inform when there is an inactive ia since it uses product id 0 and can't find the details...
 				$messages[] = $record['type']." confirmed for order txid:".$record['txid'];	
 				
 				//send post message to web api here... 
@@ -127,6 +128,9 @@ class Process extends App {
 		$address_submission_candidates=[];
 		//Get transfers and save them if they are new and later than the db creation time.	
 		$export_transfers_result = $this->deroApiModel->getTransfers();
+
+	//	$export_transfers_result =file_get_contents('testjson.json');
+		
 		$export_transfers_result = json_decode($export_transfers_result);
 		if($export_transfers_result === NULL){
 			$errors[] = "Wallet Connection Error.";
@@ -144,7 +148,7 @@ class Process extends App {
 						//check type of inventory update... product or iaddress
 						if($p_and_ia_ids !== false){
 							$product_changes = true;
-							//set chenges to true to reload the products
+							//set changes to true to reload the products
 							if($p_and_ia_ids['id_type'] == 'p'){
 								$this->webApiModel->submitProduct($this->productModel->getProductById($p_and_ia_ids['p']));	
 								//$return_actions['inv_pids'][]=$p_and_ia_ids['p'];
@@ -161,9 +165,9 @@ class Process extends App {
 				}
 			}
 		}	
-
-		//Now do address submissions since old address submissions need to be filtered out first.
+			
 		$address_arrays=[];
+		//Now do address submissions since old address submissions need to be filtered out first.
 		if(!empty($address_submission_candidates)){
 			foreach($address_submission_candidates as $entry){				
 				$res = $this->processModel->getAddressArray($entry);	
@@ -178,7 +182,7 @@ class Process extends App {
 			}
 			
 			foreach($filtered as $latest_submission){
-				//Seems to be an address submission, update response record in db
+				//It is an address submission possibly
 				$saved = $this->processModel->saveAddress($latest_submission);
 				if($saved !== false){
 					$messages[] = "Shipping address submitted by buyer.";
@@ -199,46 +203,140 @@ class Process extends App {
 		/** Do regular products **/
 		/*************************/
 
-		$transfer_list = [];
+		$tx_list = [];
 
-		foreach($notProcessed as &$tx){
+		foreach($notProcessed as $tx){
 			
 			$settings = $this->processModel->getIAsettings($tx);
-
+	
 			$successful=false;
-			if($settings !== false){
-				//filter out scid token transfers
-				if($settings['scid'] != ''){
-					continue 1;
-				}else if($settings['ia_scid'] != ''){
-					continue 1;
-				}
-				//Enusre it was a successful incoming transaction.
-				if($tx['successful'] == 1){
-					$successful = true;
-				}				
-			}
-			
+			//Enusre it was a successful incoming transaction.
+			if($tx['successful'] == 1){
+				$successful = true;
+			}	
 			if($successful){
 				//Was found and had enough inventory.
-				$xfer = $this->createTransfer($tx,$settings);
-				$tx = $xfer->tx; //since it was passed in by reference passing it to $tx may not be required.
-				$transfer_list[] = $xfer->xfer;
-
+				if($settings['scid'] == '' && $settings['ia_scid'] == ''){
+					if($settings['p_type'] == 'physical'){
+						$tx_list['physical_sales'][] = $tx;
+					}else{
+						$tx_list['digital_sales'][] = $tx;
+					}					
+				}else{
+					$tx_list['sc_sales'][] = $tx;
+				}
+			
+			}else if($settings !== false){
+				//No inventory
+		
+				if($settings['scid'] == '' && $settings['ia_scid'] == ''){
+					$tx_list['refunds'][] = $tx;
+				}else{
+					$tx_list['sc_refunds'][] = $tx;
+				}
+				
 			}else{
-				
-				
-				
 				//No mathcing products / I. Addresses found
-				//Send Refund to buyer
-				$xfer = $this->createRefundTransfer($tx,$settings);
-				$tx = $xfer->tx;
-				$transfer_list[] = $xfer->xfer;
+				$tx_list['refunds'][] = $tx;
+				
 			}
 			
 			
 		}	
-		unset($tx);
+		unset($notProcessed);
+
+
+
+
+	//Combine orders from same wallet and block
+	if(isset($tx_list['physical_sales'])){		
+		$heights = [];
+		foreach($tx_list['physical_sales'] as $tx){
+			$heights[$tx['block_height']][] = $tx;
+		}
+		$blocks = [];
+		foreach($heights as $height => $tx_array){
+			foreach($tx_array as $tx){
+				$blocks[$height][$tx['buyer_address']][] = $tx;
+			}	
+		}
+		$orders = [];
+		foreach($blocks as $block => $addresses){
+			foreach($addresses as $tx_array){
+				$this->processModel->insertOrder($tx_array,'physical_sale');
+			}
+		}
+	}
+	
+	//Create digital sales as separate orders.
+	if(isset($tx_list['digital_sales'])){		
+		foreach($tx_list['digital_sales'] as $tx){		
+			$this->processModel->insertOrder([$tx],'digital_sale');
+		}
+	}		
+	//Create refund orders.
+	if(isset($tx_list['refunds'])){		
+		foreach($tx_list['refunds'] as $tx){		
+			$this->processModel->insertOrder([$tx],'refund');
+		}
+	}
+	
+	
+	//Create sc_sales orders.
+	if(isset($tx_list['sc_sales'])){		
+		foreach($tx_list['sc_sales'] as $tx){
+			$this->processModel->insertOrder([$tx],'sc_sale');
+		}
+	}
+	
+	//Create sc refund orders.
+	if(isset($tx_list['sc_refunds'])){		
+		foreach($tx_list['sc_refunds'] as $tx){
+			$this->processModel->insertOrder([$tx],'sc_refund');
+		}
+	}
+
+
+
+
+
+	
+	$transfer_list = [];
+	$pending_orders = [];	
+	
+	$pending_physical_sale_orders = $this->processModel->getOrdersByStatusAndType('pending','physical_sale');	
+	foreach($pending_physical_sale_orders as &$tx){
+		$settings = $this->processModel->getIAsettings($tx);		
+		$xfer = $this->createTransfer($tx,$settings);
+		$tx = $xfer->tx;
+		$transfer_list[] = $xfer->xfer;
+	}
+	unset($tx);
+	
+	$pending_digital_sale_orders = $this->processModel->getOrdersByStatusAndType('pending','digital_sale');	
+	foreach($pending_digital_sale_orders as &$tx){
+		$settings = $this->processModel->getIAsettings($tx);		
+		$xfer = $this->createTransfer($tx,$settings);
+		$tx = $xfer->tx;
+		$transfer_list[] = $xfer->xfer;
+	}
+	unset($tx);
+	
+	$pending_orders = array_merge($pending_physical_sale_orders,$pending_digital_sale_orders);
+	
+	$pending_refund_orders = $this->processModel->getOrdersByStatusAndType('pending','refund');	
+	foreach($pending_refund_orders as &$tx){
+		$settings = $this->processModel->getIAsettings($tx);		
+		$xfer = $this->createRefundTransfer($tx,$settings);
+		$tx = $xfer->tx;
+		$transfer_list[] = $xfer->xfer;
+	}
+	unset($tx);
+	
+	
+
+	$pending_orders = array_merge($pending_orders,$pending_refund_orders);
+
 
 
 		/***************************************/
@@ -294,20 +392,12 @@ class Process extends App {
 
 
 		if(empty($errors) && $responseTXID !== ''){
-			foreach($notProcessed as $tx){
+			foreach($pending_orders as $tx){
 				
-				//Not set, not a regular product...
-				if(! isset($tx['out_scid'])){ //actually should always be set by now in theory.
-					continue 1;					
-				}else{
-					if(!($tx['type'] == 'sale' || $tx['type'] == 'refund') ){
-						continue 1;
-					}
-				}
 				//Mark incoming transaction as processed. 
 				//In the next check cycle it can be set to unprocessed above if response is not confirmed, then it is reprocessed. 
 				//Inventory is done once when it is first inserted.				
-				$result = $this->processModel->markAsProcessed($tx['txid']);
+				$result = $this->processModel->markOrderAsProcessed($tx['order_id']);
 					
 				$given = new DateTime();
 				$given->setTimezone(new DateTimeZone("UTC"));	
@@ -315,7 +405,7 @@ class Process extends App {
 				//could save time of next block instead of waiting 18 seconds for a confirmation check turbo mode
 				if($result !== false){
 					$response = (object)[
-					"incoming_id"=>$tx['id'],
+					"order_id"=>$tx['order_id'],
 					"txid"=>$responseTXID,
 					"type"=>$tx['type'],
 					"buyer_address"=>$tx['buyer_address'],
@@ -333,12 +423,26 @@ class Process extends App {
 					
 					
 					$this->processModel->saveResponse($response);
+					$message_part='';
+					if($tx['type'] == 'sale'){
+						$detail_set = $this->processModel->getOrderDetails($tx['order_id']);
+						foreach($detail_set as $details){
+							$message_part .= $details['product_label'].', ';
+						}
+						$message_part = rtrim($message_part,', ');
+					}else{
+						$message_part = $tx['product_label'];
+					}
 					
-					$messages[] = "{$tx['type']} response initiated". ($tx['type'] == 'sale' ? ' for "'.$tx['ia_comment'].'"' : '') . ".";
+					$messages[] = "{$tx['type']} response initiated". ($tx['type'] == 'sale' ? ' for "'.$message_part.'"' : '') . ".";
 					
 				}
 			}
 		}
+
+
+
+
 
 
 
@@ -350,8 +454,13 @@ class Process extends App {
 		//transfer_list	
 
 		if(empty($transfer_list)){//Done with regular response transfer
+		
+			$pending_sc_orders = $this->processModel->getOrdersByStatusAndType('pending','sc_sale');	
+			$pending_sc_refunds = $this->processModel->getOrdersByStatusAndType('pending','sc_refund');	
+			$pending_orders = array_merge($pending_sc_orders,$pending_sc_refunds);
+		
 			$sent_one = false;			
-			foreach($notProcessed as &$tx){
+			foreach($pending_orders as &$tx){
 				if($sent_one){
 					break;
 				}
@@ -360,13 +469,7 @@ class Process extends App {
 				$successful=false;
 				if($settings !== false){	
 					//Make sure it is a token sale...
-					if($settings['scid'] == '' && $settings['ia_scid'] == ''){
-						continue 1;
-					}
 					$successful = $tx['successful'];								
-				}else{
-					//should be handled in regular
-					continue 1;
 				}
 			
 				if($successful==1){
@@ -446,7 +549,7 @@ class Process extends App {
 				}
 				
 				if($responseTXID !== ''){
-					$result = $this->processModel->markAsProcessed($tx['txid']);
+					$result = $this->processModel->markOrderAsProcessed($tx['order_id']);
 						
 					$given = new DateTime();
 					$given->setTimezone(new DateTimeZone("UTC"));	
@@ -455,7 +558,7 @@ class Process extends App {
 
 					if($result !== false){
 						$response = (object)[
-						"incoming_id"=>$tx['id'],
+						"order_id"=>$tx['order_id'],
 						"txid"=>$responseTXID,
 						"type"=>$tx['type'],
 						"buyer_address"=>$tx['buyer_address'],
@@ -545,7 +648,7 @@ class Process extends App {
 	public function createRefundTransfer(&$tx,$settings){	
 		$transfer['respond_amount'] = $tx['amount'];
 		$transfer['address'] = $tx['buyer_address'];	
-		$transfer['out_message'] =  "Integrated Address Inactive.";	
+		$transfer['out_message'] = substr("Refund for: ". $tx['product_label'],0,100);	
 		$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";
 		$transfer_object=(object)$transfer;	
 		//update unprocessed array
@@ -622,7 +725,7 @@ class Process extends App {
 		
 		$transfer['respond_amount'] = $tx['amount'];
 		$transfer['address'] = $tx['buyer_address'];	
-		$transfer['out_message'] =  "Integrated Address for S.C. Inactive.";	
+		$transfer['out_message'] = substr("Refund for: ". $tx['product_label'],0,100);	
 		$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";
 		$transfer_object=(object)$transfer;	
 		//update unprocessed array
@@ -644,5 +747,4 @@ class Process extends App {
 
 	
 }
-
 
