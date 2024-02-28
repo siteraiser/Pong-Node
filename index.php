@@ -651,7 +651,7 @@ function typeSelect(data,stored_value=''){
 	}	
 	if(value == "physical"){	
 		hideSCIDFields(id,modal);
-		modal.querySelector('input[name="out_message"]').placeholder='Leave blank or UUID will be appended (Use UIID must be selected for shipping info)';
+		modal.querySelector('input[name="out_message"]').placeholder='Leave blank or UUID will be appended (Use UUID must be selected for shipping info)';
 		
 		if(api_url=='https://ponghub.com/papi'){
 			modal.querySelector('input[name="out_message"]').placeholder='Register website with api url in settings';
