@@ -57,6 +57,7 @@ class processModel extends App {
 	
 	
 	
+	
 	function saveAddress($address_array){
 		
 		$stmt=$this->pdo->prepare("SELECT id,ship_address FROM responses WHERE crc32 = ? ORDER BY id DESC LIMIT 1"); //AND (ship_address IS NULL OR ship_address = '')
@@ -116,9 +117,8 @@ class processModel extends App {
 		return $address_array;
 	}
 	
-
-
 	
+
 	function txExists($tx){
 
 		$stmt=$this->pdo->prepare("SELECT id FROM incoming WHERE txid = ?");
@@ -209,6 +209,93 @@ class processModel extends App {
 		return $p_and_ia_ids;
 	}
 
+	function getTXCollection($txid){
+
+		$stmt=$this->pdo->prepare("SELECT order_id FROM responses WHERE txid = ?");
+		$stmt->execute([$txid]);		
+		if($stmt->rowCount()==0){
+			return [];
+		}
+		
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+	function markOrderAsPending($txid){
+		$order_ids = $this->getTXCollection($txid);
+		$ids =[];
+		foreach($order_ids as $order_id){
+			$ids[] = $order_id['order_id'];
+		}
+		
+		$ids = implode(",",$ids);
+		$result =$this->pdo->query("UPDATE orders SET order_status = 'pending' WHERE id IN($ids)");
+		if($result !== false && $result->rowCount() > 0){		
+			return true;
+		}else{	
+			return false;
+		}
+	}
+
+	function markIncSuccessfulTwo($inc_id){
+		//For failed token transfers (error of not enough etc)
+		$result =$this->pdo->query("UPDATE incoming SET successful = '2' WHERE id ='$inc_id'");
+		if($result !== false && $result->rowCount() > 0){		
+			return true;
+		}else{	
+			return false;
+		}
+	}
+
+
+	function getConfirmedInc($txid){
+
+		$stmt=$this->pdo->prepare("
+		SELECT *, responses.out_message AS response_out_message FROM responses 
+		INNER JOIN orders ON responses.order_id = orders.id 
+		INNER JOIN incoming ON FIND_IN_SET(incoming.id, orders.incoming_ids)
+		RIGHT JOIN products ON incoming.for_product_id = products.id 
+		WHERE responses.txid =  ?
+		");
+		
+		$stmt->execute([$txid]);		
+		if($stmt->rowCount()==0){
+			return [];
+		}
+		
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+
+
+
+	function unprocessedTxs(){
+
+		$stmt=$this->pdo->prepare("SELECT * FROM incoming WHERE processed = '0'");
+		$stmt->execute([]);		
+		if($stmt->rowCount()==0){
+			return false;
+		}
+		
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+/*
+	function markAsProcessed($txid){
+
+		$query='UPDATE incoming SET 
+			processed=:processed
+			WHERE txid=:txid';	
+		
+		$stmt=$this->pdo->prepare($query);
+		$stmt->execute(array(
+			':processed'=>1,
+			':txid'=>$txid));				
+					
+		if($stmt->rowCount()==0){
+			return false;
+		}
+	}
+*/
+
+
 	function makeTxObject($entry){
 		
 		$tx = [];	
@@ -248,8 +335,101 @@ class processModel extends App {
 	}
 
 
+	
+	
+	
+	
+	
+	function insertOrder($order,$type){
+		$iids=[];
+		foreach($order as $tx){
+			$iids[] = $tx['id'];
+		}
+		$inc_ids = implode(",",$iids);
+		$in  = str_repeat('?,', count($iids) - 1) . '?';
+		
+		$query="INSERT INTO orders (
+			incoming_ids,
+			order_type,
+			order_status
+			)
+			VALUES
+			(?,?,?);
+			
+			UPDATE incoming SET 
+			processed='1'
+			WHERE id IN ($in)			
+			";	
+		
+		$array=array(
+			$inc_ids,
+			$type,
+			'pending'			
+			);				
+
+		$array = array_merge($array,$iids);		
+		$stmt=$this->pdo->prepare($query);
+		$stmt->execute($array);		
+		if($stmt->rowCount()==0){
+			return false;
+		}
+		return true;
+	}
+	
+	//Get pending orders
+	function getOrdersByStatusAndType($status,$type){
+
+		$stmt=$this->pdo->prepare("
+		SELECT *,orders.id AS order_id FROM orders 
+		INNER JOIN incoming ON FIND_IN_SET(incoming.id, orders.incoming_ids)
+		WHERE order_status = ? AND order_type = ? GROUP BY orders.incoming_ids");
+		$stmt->execute([$status,$type]);		
+		if($stmt->rowCount()==0){
+			return [];
+		}
+		
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+	
+	
+	function markOrderAsProcessed($order_id){
+
+		$query='UPDATE orders SET 
+			order_status=:order_status
+			WHERE id=:id';	
+		
+		$stmt=$this->pdo->prepare($query);
+		$stmt->execute(array(
+			':order_status'=>'confirmed',
+			':id'=>$order_id));				
+					
+		if($stmt->rowCount()==0){
+			return false;
+		}
+	}
+	
+	function getOrderDetails($order_id){
+		$stmt=$this->pdo->prepare("
+		SELECT * FROM orders
+		INNER JOIN incoming ON FIND_IN_SET(incoming.id, orders.incoming_ids) 
+		WHERE orders.id = ?
+		");
+		$stmt->execute([$order_id]);		
+		if($stmt->rowCount()==0){
+			return false;
+		}
+		
+		return $stmt->fetchAll(PDO::FETCH_ASSOC);
+	
+	}
+	
+	
+	
+	
+	/* responses */
+
 	//check responses to ensure they went through, if not mark as not processed 
-	function unConfirmedTxs(){
+	function unConfirmedResponses(){
 
 		$stmt=$this->pdo->prepare("SELECT DISTINCT txid,txids,time_utc,t_block_height FROM responses WHERE confirmed = '0'");
 		$stmt->execute([]);		
@@ -260,7 +440,7 @@ class processModel extends App {
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 	
-
+	
 	function markResAsConfirmed($txid){
 
 		$query='UPDATE responses SET 
@@ -293,75 +473,6 @@ class processModel extends App {
 	}
 
 
-	function getTXCollection($txid){
-
-		$stmt=$this->pdo->prepare("SELECT incoming_id FROM responses WHERE txid = ?");
-		$stmt->execute([$txid]);		
-		if($stmt->rowCount()==0){
-			return [];
-		}
-		
-		return $stmt->fetchAll(PDO::FETCH_ASSOC);
-	}
-
-	function markIncAsNotProcessed($txid){
-		$incoming_ids = $this->getTXCollection($txid);
-		$ids =[];
-		foreach($incoming_ids as $incoming_ids){
-			$ids[] = $incoming_ids['incoming_id'];
-		}
-		
-		$ids = implode(",",$ids);
-		$result =$this->pdo->query("UPDATE incoming SET processed = '0' WHERE id IN($ids)");
-		if($result !== false && $result->rowCount() > 0){		
-			return true;
-		}else{	
-			return false;
-		}
-	}
-
-	function markIncSuccessfulTwo($inc_id){
-		//For failed token transfers (error of not enough etc)
-		$result =$this->pdo->query("UPDATE incoming SET successful = '2' WHERE id ='$inc_id'");
-		if($result !== false && $result->rowCount() > 0){		
-			return true;
-		}else{	
-			return false;
-		}
-	}
-
-
-
-
-	function getConfirmedInc($txid){
-
-		$stmt=$this->pdo->prepare("
-		SELECT *, responses.out_message AS response_out_message FROM responses 
-		INNER JOIN incoming ON responses.incoming_id = incoming.id 
-		RIGHT JOIN products ON incoming.for_product_id = products.id 
-		WHERE responses.txid =  ?
-		");
-		
-		$stmt->execute([$txid]);		
-		if($stmt->rowCount()==0){
-			return [];
-		}
-		
-		return $stmt->fetchAll(PDO::FETCH_ASSOC);
-	}
-
-
-
-	function unprocessedTxs(){
-
-		$stmt=$this->pdo->prepare("SELECT * FROM incoming WHERE processed = '0'");
-		$stmt->execute([]);		
-		if($stmt->rowCount()==0){
-			return false;
-		}
-		
-		return $stmt->fetchAll(PDO::FETCH_ASSOC);
-	}
 
 		
 	function getIAsettings($tx,$addon=''){
@@ -378,28 +489,13 @@ class processModel extends App {
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 	}
 
-	function markAsProcessed($txid){
-
-		$query='UPDATE incoming SET 
-			processed=:processed
-			WHERE txid=:txid';	
-		
-		$stmt=$this->pdo->prepare($query);
-		$stmt->execute(array(
-			':processed'=>1,
-			':txid'=>$txid));				
-					
-		if($stmt->rowCount()==0){
-			return false;
-		}
-	}
 
 
 
-	function getRespsonseTXIDS($incoming_id){
+	function getRespsonseTXIDS($order_id){
 
-		$stmt=$this->pdo->prepare("SELECT txids FROM responses WHERE incoming_id = ?");
-		$stmt->execute([$incoming_id]);		
+		$stmt=$this->pdo->prepare("SELECT txids FROM responses WHERE order_id = ?");
+		$stmt->execute([$order_id]);		
 		if($stmt->rowCount()==0){
 			return false;
 		}
@@ -411,7 +507,7 @@ class processModel extends App {
 		
 		
 		//Add to list of txns
-		$responseTXIDS = $this->getRespsonseTXIDS($response->incoming_id);		
+		$responseTXIDS = $this->getRespsonseTXIDS($response->order_id);		
 		$responseTXIDS = explode(",",$responseTXIDS);		
 		$responseTXIDS[] = $response->txid;
 		$responseTXIDS = implode(",",$responseTXIDS);
@@ -422,7 +518,7 @@ class processModel extends App {
 			txids=:txids,
 			time_utc=:time_utc,
 			t_block_height=:t_block_height
-			WHERE incoming_id=:incoming_id';	
+			WHERE order_id=:order_id';	
 		
 		$stmt=$this->pdo->prepare($query);
 		$stmt->execute(array(
@@ -430,17 +526,17 @@ class processModel extends App {
 			':txids'=>$responseTXIDS,
 			':time_utc'=>$response->time_utc,
 			':t_block_height'=>$response->t_block_height,
-			':incoming_id'=>$response->incoming_id));				
+			':order_id'=>$response->order_id));				
 					
 		if($stmt->rowCount()==0){
 			return false;
 		}
 	}
 
-	function checkForResponseById($incoming_id){
+	function checkForResponseById($order_id){
 
-		$stmt=$this->pdo->prepare("SELECT * FROM responses WHERE incoming_id = ? AND confirmed = '0'");
-		$stmt->execute([$incoming_id]);		
+		$stmt=$this->pdo->prepare("SELECT * FROM responses WHERE order_id = ? AND confirmed = '0'");
+		$stmt->execute([$order_id]);		
 		if($stmt->rowCount()==0){
 			return false;
 		}
@@ -451,7 +547,7 @@ class processModel extends App {
 
 	function saveResponse($response){
 		//See if a response record exists, if so just update the txid (this way only the original uuid is used)
-		$responseRecord = $this->checkForResponseById($response->incoming_id);
+		$responseRecord = $this->checkForResponseById($response->order_id);
 		if($responseRecord !== false){
 			$this->updateResponseTX($response);
 			return true;
@@ -459,7 +555,7 @@ class processModel extends App {
 		
 		//No record, insert one.
 		$query='INSERT INTO responses (
-			incoming_id,
+			order_id,
 			txid,
 			txids,
 			type,
@@ -480,7 +576,7 @@ class processModel extends App {
 			';	
 		
 		$array=array(
-			$response->incoming_id,
+			$response->order_id,
 			$response->txid,
 			$response->txid,
 			$response->type,
@@ -504,6 +600,9 @@ class processModel extends App {
 		}
 		return true;
 	}
+	
+
+	
 	/*function removeResponse($txid){
 
 		$stmt=$this->pdo->prepare("DELETE FROM responses WHERE txid = ?");
