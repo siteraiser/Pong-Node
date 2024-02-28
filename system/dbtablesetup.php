@@ -60,9 +60,20 @@ CREATE TABLE incoming (
 	PRIMARY KEY (id)
 ) ENGINE=InnoDB;
 
+
+CREATE TABLE orders (
+	id smallint(6) unsigned NOT NULL auto_increment,
+	incoming_ids varchar(500) NULL,
+	order_type varchar(100) NULL,
+	order_status varchar(50) NULL,
+	lastupdate timestamp DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (id)
+) ENGINE=InnoDB;
+
+
 CREATE TABLE responses (
 	id smallint(6) unsigned NOT NULL auto_increment,
-	incoming_id smallint(6) unsigned NOT NULL,
+	order_id smallint(6) unsigned NOT NULL,
 	txid varchar(150) NULL,
 	txids varchar(2000) NULL,
 	type varchar(150) NULL,
