@@ -23,8 +23,10 @@ class loadoutModel extends App {
 		ON (i.for_product_id = p.id)
 		LEFT JOIN i_addresses as ia 
 		ON (i.amount = ia.ask_amount AND i.port = ia.port AND p.id = ia.product_id)
+		LEFT JOIN orders as o
+		ON FIND_IN_SET(i.id, o.incoming_ids)
 		INNER JOIN responses as res 
-		ON (i.id = res.incoming_id) 
+		ON (o.id = res.order_id) 
 		WHERE res.type = 'sale' OR res.type = 'sc_sale'
 		");
 		$stmt->execute(array());
