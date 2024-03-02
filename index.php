@@ -279,14 +279,15 @@ div.tip{
 		<br>
 		<div id="integrated_addresses">
 		</div>
-		<button role="button" id="edit_product">Update Product</button>
+		<button role="button" id="edit_product">Update Product</button><button role="button" id="delete_product">Delete Product</button>
 	</form>
 </div>
 
 
 
 <script>
-
+//dir = document.location.pathname.split('/', 2);
+var dir = '';
 //manage the views
 var viewing_state = 'products';
 var menu = document.getElementById("menu");
@@ -340,7 +341,7 @@ function settings(form) {
 	
 	async function getSettings(form) {
 	  try {
-		const response = await fetch("/settings.php", {
+		const response = await fetch(dir+"/settings.php", {
 		  method: "POST", // or 'PUT'
 		  headers: {
         'credentials': 'same-origin'
@@ -429,7 +430,7 @@ function createSettingsForm(ss) {
 function loadout() {
 	async function getTransactions(data) {
 	  try {
-		const response = await fetch("/loadout.php", {
+		const response = await fetch(dir+"/loadout.php", {
 		  method: "POST", // or 'PUT'
 		  headers: {
         'credentials': 'same-origin',
@@ -457,8 +458,8 @@ function createTable(table_data) {
   	var table = '<thead><th>Product Label</th><th>Comment</th><th>Amount</th><th>Out Message</th><th>Response Amt.</th><th>Buyer Address</th><th>Shipping Address</th><th>Out TXID</th><th>Time UTC</th></thead><tbody>';
 	table_data.transactions.forEach(function (val, index, array) {
 		let td='';
-		td +='<td>'+ val.label + '</td>';
-		td +='<td>'+ val.comment + '</td>';
+		td +='<td>'+ val.product_label + '</td>';
+		td +='<td>'+ val.ia_comment + '</td>';
 		td +='<td>'+ val.amount + ' (' + niceRound( val.amount * .00001) + ' Dero)' + '</td>';
 		td +='<td>'+  val.res_out_message + '</td>';
 		td +='<td>'+ val.out_amount + ' (' + niceRound( val.out_amount * .00001) + (val.type == 'sc_sale'? ' Token': ' Dero') + ')</td>';		
@@ -660,6 +661,7 @@ function typeSelect(data,stored_value=''){
 		
 		modal.querySelector('input[name="api_url"]').placeholder='API URL to send UUID to if Use UUID is checked';
 		if(id == 'p_type'){
+			modal.querySelector('input[name="out_message"]').value ='';		
 			//modal.querySelector('input[name="api_url"]').value = api_url;
 		}
 	}
@@ -877,7 +879,7 @@ var api_url = '';
 function initialize(runit) {
 	async function getProducts(data) {
 	  try {
-		const response = await fetch("/initialize.php", {
+		const response = await fetch(dir+"/initialize.php", {
 		  method: "POST", // or 'PUT'
 		  headers: {
         'credentials': 'same-origin',
@@ -911,7 +913,7 @@ function initialize(runit) {
 function addProduct(form) {
 	async function submitProduct(form) {
 	  try {
-		const response = await fetch("/addproduct.php", {
+		const response = await fetch(dir+"/addproduct.php", {
 		  method: "POST", // or 'PUT'
 		  headers: {
         'credentials': 'same-origin' 
@@ -972,14 +974,14 @@ function editProduct(form) {
 	
 		var editform = new FormData(form);
 		var fileInput = form.querySelector('#img');
-		console.log(fileInput.src);
+		//console.log(fileInput.src);
 		var src = '';
 		if(fileInput.src != document.location && fileInput.src != document.location + '#'){	
 			src = fileInput.src;
 		}
 		editform.append('image', src);
 	  try {
-		const response = await fetch("/editproduct.php", {
+		const response = await fetch(dir+"/editproduct.php", {
 		  method: "POST", // or 'PUT'
 		  headers: {
         'credentials': 'same-origin' 
@@ -1087,7 +1089,8 @@ function editProducts(pid) {
 		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>SCID Respond Amount: "+ia_respond_amount_input+'<span class="token_units">('+ niceRound(iadd.ia_respond_amount * .00001)+' Token)</span></label>';
 		
 		let inv_input = '<input class="ia_inventory" name="ia_inventory['+iadd.id+']" value="'+iadd.ia_inventory+'" type="text" >';
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "Inventory: "+inv_input+"<hr>";
+		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "Inventory: "+inv_input+"<br>";
+		edit_product_modal.querySelector("#integrated_addresses").innerHTML +=  '<button onclick="deleteIA('+iadd.id+')" class="delete_button" >Delete I.A.</button>'+"<hr>";
 		
 	});
 	
@@ -1105,6 +1108,103 @@ window.addEventListener('load', function() {
 });	
 
 
+
+
+
+
+
+
+
+
+
+/*******************************/
+/* Delete Products / IAdresses */
+/*******************************/
+
+
+function deleteItem(type,id) {
+	async function submitDelete(data) {
+	
+	  try {
+		const response = await fetch(dir+"/deleteitem.php", {
+		  method: "POST", // or 'PUT'
+		  headers: {
+        'credentials': 'same-origin',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json;charset=utf-8'
+        },
+		  body: JSON.stringify(data),
+		});
+
+		const result = await response.json();			
+
+		if(result.success == false){
+			let msgs = '';
+			if(typeof result.errors != 'undefined'){
+				for(var key in result.errors){
+					msgs += result.errors[key] +' ';				
+				}
+				
+				messages.querySelector("#message_list").innerHTML = msgs;
+				messages.classList.remove("hidden");
+			}
+		
+		}else if(result.success == true){
+			main.innerHTML = '';
+			products_array = result.products;
+			
+
+			if(data.type == 'iaddress'){
+				editProducts(edit_product_modal.querySelector("#pid").value);
+			}else{				
+				edit_product_modal.classList.add("hidden");	
+				darken_layer.classList.add("hidden");
+			}
+			displayProducts(products_array);
+			
+		}
+	
+		
+	  } catch (error) {
+		console.error("Error:", error);
+	  }
+	}
+
+	const data = {action: "delete",  type: type, id: id};
+	submitDelete(data);
+	
+}
+
+var delete_product_button = document.getElementById("delete_product");
+
+delete_product_button.addEventListener("click", (event) => {
+	event.preventDefault();
+	let result = confirm("Are you sure you want to delete this product?");
+	if(result == false){
+		return false;
+	}	
+	
+	let form = event.target.parentElement;	
+	let product_id = form.querySelector("#pid").value;
+	deleteItem('product',product_id);
+});	
+
+
+function deleteIA(iaddress_id){	
+event.preventDefault();
+let result = confirm("Are you sure you want to delete this Integrated Address?");
+if(result == false){
+	return false;
+}
+
+deleteItem('iaddress',iaddress_id);
+//console.log(result);
+
+}
+
+
+
+/*
 function deIncProduct(pids){
 	pids.forEach(function (product_id, index, array) {
 		var product = products_array.find(x => x.id == product_id);
@@ -1124,14 +1224,14 @@ function deIncIAddress(pairs){
 	});	
 	
 }
-
+*/
 
 
 /* check for new transactions */
 function checkWallet() {
 	async function process() {
 	  try {
-		const response = await fetch("/process.php", {
+		const response = await fetch(dir+"/process.php", {
 		  method: "POST", // or 'PUT'
 		  headers: {
         'credentials': 'same-origin',
