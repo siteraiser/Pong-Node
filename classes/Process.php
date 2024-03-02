@@ -427,11 +427,11 @@ class Process extends App {
 					if($tx['type'] == 'sale'){
 						$detail_set = $this->processModel->getOrderDetails($tx['order_id']);
 						foreach($detail_set as $details){
-							$message_part .= $details['product_label'].', ';
+							$message_part .= $details['product_label']. ' '. $details['ia_comment'] . ', ';
 						}
 						$message_part = rtrim($message_part,', ');
 					}else{
-						$message_part = $tx['product_label'];
+						$message_part = $tx['product_label']. ' ' . $details['ia_comment'];
 					}
 					
 					$messages[] = "{$tx['type']} response initiated". ($tx['type'] == 'sale' ? ' for "'.$message_part.'"' : '') . ".";
@@ -632,7 +632,7 @@ class Process extends App {
 		$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";				
 		$transfer_object=(object)$transfer;
 		//update unprocessed array
-		$tx['ia_comment'] = $settings['ia_comment'];
+		//$tx['ia_comment'] = $settings['ia_comment'];
 		$tx['respond_amount'] = $transfer['respond_amount'];
 		$tx['out_message'] = $transfer['out_message'];
 		$tx['out_message_uuid'] = $settings['out_message_uuid'];
@@ -648,7 +648,7 @@ class Process extends App {
 	public function createRefundTransfer(&$tx,$settings){	
 		$transfer['respond_amount'] = $tx['amount'];
 		$transfer['address'] = $tx['buyer_address'];	
-		$transfer['out_message'] = substr("Refund for: ". $tx['product_label'],0,100);	
+		$transfer['out_message'] = substr("Refund for: ". $tx['product_label'].'-'. $tx['ia_comment'],0,110);	//should check byte size here...
 		$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";
 		$transfer_object=(object)$transfer;	
 		//update unprocessed array
@@ -705,7 +705,7 @@ class Process extends App {
 			
 		$transfer_object=(object)$transfer;
 		//update unprocessed array
-		$tx['ia_comment'] = $settings['ia_comment'];
+		//$tx['ia_comment'] = $settings['ia_comment'];
 		$tx['respond_amount'] = $transfer['respond_amount'];
 		$tx['out_message'] = $transfer['out_message'];
 		$tx['out_message_uuid'] = $settings['out_message_uuid'];
@@ -725,7 +725,7 @@ class Process extends App {
 		
 		$transfer['respond_amount'] = $tx['amount'];
 		$transfer['address'] = $tx['buyer_address'];	
-		$transfer['out_message'] = substr("Refund for: ". $tx['product_label'],0,100);	
+		$transfer['out_message'] = substr("Refund for: ". $tx['product_label'].'-'.$tx['ia_comment'],0,110);	
 		$transfer['scid'] = "0000000000000000000000000000000000000000000000000000000000000000";
 		$transfer_object=(object)$transfer;	
 		//update unprocessed array
