@@ -177,6 +177,7 @@ class processModel extends App {
 			port,
 			for_product_id,
 			for_ia_id,
+			ia_comment,
 			product_label,
 			successful,
 			processed,
@@ -184,7 +185,7 @@ class processModel extends App {
 			time_utc
 			)
 			VALUES
-			(?,?,?,?,?,?,?,?,?,?,?)
+			(?,?,?,?,?,?,?,?,?,?,?,?)
 			';	
 		
 		$array=array(
@@ -193,7 +194,8 @@ class processModel extends App {
 			$tx->amount,
 			$tx->port,
 			$tx->for_product_id,
-			($p_and_ia_ids ===false?null:$p_and_ia_ids['ia']),			
+			($p_and_ia_ids ===false?null:$p_and_ia_ids['ia']),	
+			$tx->ia_comment,	
 			$tx->product_label,
 			($p_and_ia_ids ===false?0:1),
 			0,
@@ -324,11 +326,13 @@ class processModel extends App {
 		
 		$tx['for_product_id'] = 0;
 		$tx['product_label'] = 'Inactive I.A.';
+		$tx['ia_comment'] = 'Inactive I.A.';
 		//Determine product id and current label
 		$ia_settings = $this->getIAsettings($tx);
 		if($ia_settings!==false){
 			$tx['for_product_id'] = $ia_settings['product_id'];
 			$tx['product_label'] = $ia_settings['label'];
+			$tx['ia_comment'] = $ia_settings['ia_comment'];
 		}
 		
 		return (object)$tx;
