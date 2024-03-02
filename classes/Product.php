@@ -229,7 +229,7 @@ echo'</pre>';
 		}
 		
 		if(empty($errors)){
-			$this->webApiModel->deleteIAddress($i_address);
+			$this->webApiModel->deleteIAddress($id);
 			
 			$product_results = $this->productModel->getProductsList();
 			foreach ($product_results as &$product){
