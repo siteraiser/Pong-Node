@@ -374,7 +374,7 @@ class webApiModel extends App{
 		}else{
 			$error = 'No Response';
 		}
-		$this->logRequest($this->api_url,$json,$error,'submitIAddress',$i_address_id);
+		$this->logRequest($this->api_url,$json,$error,'submitIAddress',$i_address['id']);
 
 		return $output;
 
@@ -419,7 +419,7 @@ class webApiModel extends App{
 		}else{
 			$error = 'No Response';
 		}
-		$this->logRequest($this->api_url,$json,$error,'submitIAddress',$i_address['id']);
+		$this->logRequest($this->api_url,$json,$error,'submitIAddress',$i_address_id);
 
 		return $output;
 
