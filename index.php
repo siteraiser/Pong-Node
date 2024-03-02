@@ -2,7 +2,10 @@
 <html>
 <head>
 <style>
-
+body{
+	color:gold;
+	background-color:#000;
+}
 .timer{float:right;}
 
 #main div{
@@ -11,6 +14,7 @@
 	
 }
 #main > div{
+	background-color:#252525;
 	border:2px solid green;
 	padding:10px;
 	border-radius:3px;
@@ -24,8 +28,8 @@
 	top:10px;
 }
 .modal {
-	background-color:#fff;
-	box-shadow: 10px 10px 5px grey;
+	background-color:#252525;
+	box-shadow: 4px 1px 11px 5px #072904;
 	box-sizing: border-box;
 	max-width: 500px;
 	max-height: 100%;	
@@ -41,8 +45,10 @@
 }
 
 
+	
 .modal label{
 	display:block;
+	margin: 5px;
 }
 .modal label.hidden{
 	display:none;
@@ -67,6 +73,21 @@
 	 overflow-wrap: break-word;
 	 line-height: 1.7em;
 }
+.modal input,textarea,select{
+	background: black;
+    color: #56ff04;
+    padding: 5px;
+}
+select option{
+	padding: 5px;
+}	
+.modal fieldset{
+	margin:0 -5px;
+}
+
+
+
+
 #messages,#transactions{
 	z-index:2;
 	overflow-y: auto;
@@ -96,6 +117,7 @@ input[name="out_message"],
 input[name="api_url"],
 input[name="scid"]{
 	width:100%;
+	  box-sizing: border-box;
 }
 
 #edit_product_modal input[name="comment"],
@@ -104,8 +126,17 @@ input[name="scid"]{
 	border: 1px solid #0f0;
 }
 
+.edit_i_address{
+	border:1px solid grey;
+	padding:3px;
+}
+.edit_i_address_address{
+	 line-height: 1.3em;
+}
+
 
 span.info{
+	color: #000;
 	position:relative;
 	cursor: pointer;
 	width: 16px;
@@ -190,32 +221,38 @@ div.tip{
 		<label>Product Details
 			<textarea id="details" name="details" type="text" ></textarea>
 		</label>
-		<label>Comment <span class="info comment_info">i</span>
-			<input id="comment" name="comment" type="text" >
-		</label>
+	
+		
+		
+		<fieldset>
+			<legend>Integrated Address Fields</legend>	
+			<label>Comment <span class="info comment_info">i</span>
+				<input id="comment" name="comment" type="text" >
+			</label>
+			<label>Ask Amount (atomic units)
+				<input id="ask_amount" class="atomic_units dero" name="ask_amount" type="number" step="1"> <span class="token_units"></span>
+			</label>
+			<label>Port (uint 64)
+				<input id="port" name="port" type="number" step="1">
+			</label>
+		</fieldset>
+
 		<label>Out Message (max 128b) <span class="info out_message_info">i</span>
 			<input id="out_message" name="out_message" type="text" maxlength="128">
-		</label>
+		</label>		
 		<div class="uuid">
 		Use UUID <input id="add_out_message_uuid" name="out_message_uuid" type="checkbox" > <span class="info out_message_uuid_info">i</span>
 		</div>
 		<label>Api Url <span class="info api_url_info">i</span>
 			<input id="api_url" name="api_url" type="text" maxlength="128">
 		</label>
-		
-		<label>Ask Amount (atomic units)
-			<input id="ask_amount" class="atomic_units dero" name="ask_amount" type="number" step="1"><span class="token_units"></span>
-		</label>
-		
 		<label>SCID <span class="info scid_info">i</span>
 			<input id="scid" name="scid" type="text" >
-		</label>
+		</label>		
 		<label>Respond Amount (atomic units)
-			<input id="respond_amount" class="atomic_units" name="respond_amount" type="number" step="1"><span class="token_units"></span>
+			<input id="respond_amount" class="atomic_units" name="respond_amount" type="number" step="1"> <span class="token_units"></span>
 		</label>
-		<label>Port (uint 64)
-			<input id="port" name="port" type="number" step="1">
-		</label>
+		
 		<label>Inventory
 			<input id="inventory" name="inventory" type="number" step="1"> <span class="info inventory_info">i</span>
 		</label>
@@ -245,33 +282,40 @@ div.tip{
 			<textarea id="details" name="details" type="text" ></textarea>
 		</label>
 		<label>Image
-			<input type='file' />
-			<br><img id="img" name="img" style="max-height:100px;" src="#">
-		</label>				
-		<label>Comment <span class="info comment_info">i</span>
-			<input id="comment" name="comment" type="text" >
+			<input type='file' />	
 		</label>
+			<img id="img" name="img" style="max-height:100px;" src="#">
+					
+
+		
+		
+		<fieldset>
+			<legend>Integrated Address Fields (last used)</legend>		
+			<label>Comment <span class="info comment_info">i</span>
+				<input id="comment" name="comment" type="text" >
+			</label>
+			<label>Ask Amount (atomic units)
+				<input id="ask_amount" class="atomic_units dero" name="ask_amount" type="number" step="1"> <span class="token_units"></span>
+			</label>
+			<label>Port (uint 64)
+				<input id="port" name="port" type="number" step="1" >
+			</label>
+		</fieldset>
 		<label>Out Message (max 128b) <span class="info out_message_info">i</span>
 			<input id="edit_out_message" name="out_message" type="text" maxlength="128">
+		</label>		
+		<label>SCID <span class="info scid_info">i</span>
+			<input id="edit_scid" name="scid" type="text" >
 		</label>
 		<div class="uuid">
 		Use UUID <input id="edit_out_message_uuid" name="out_message_uuid" type="checkbox" > <span class="info out_message_uuid_info">i</span>
 		</div> 
 		<label>Api Url <span class="info api_url_info">i</span>
 			<input id="api_url" name="api_url" type="text" maxlength="128">
-		</label>
-		<label>Ask Amount (atomic units)
-			<input id="ask_amount" class="atomic_units dero" name="ask_amount" type="number" step="1"><span class="token_units"></span>
-		</label>
+		</label>	
 		
-		<label>SCID <span class="info scid_info">i</span>
-			<input id="edit_scid" name="scid" type="text" >
-		</label>
 		<label>Respond Amount (atomic units, Dero if not a Token transfer)
-			<input id="respond_amount"class="atomic_units" name="respond_amount" type="number" step="1"><span class="token_units"></span>
-		</label>
-		<label>Port (uint 64)
-			<input id="port" name="port" type="number" step="1" >
+			<input id="respond_amount"class="atomic_units" name="respond_amount" type="number" step="1"> <span class="token_units"></span>
 		</label>
 		<label>Inventory
 			<input id="inventory" name="inventory" type="number" step="1"> <span class="info inventory_info">i</span>
@@ -815,7 +859,7 @@ function generateProduct(product) {
 	
 	button.appendChild(edit);
 	main.appendChild(button);
-	
+	div.innerHTML = (product.image == null ? '' : "<img style='max-height:50px;' src=" +product.image+">");
 	div.appendChild(createSection("Type: " +product.p_type));
 	div.appendChild(createSection("Label: " +product.label));
 	div.appendChild(createSection("Details: " +product.details));	
@@ -1062,6 +1106,7 @@ function editProducts(pid) {
 	
 	edit_product_modal.querySelector("#integrated_addresses").innerHTML ='';
 	let last_ia = editing.iaddress.length -1;
+	
 	editing.iaddress.forEach(function (iadd, index, array) {
 		//Auto fill using last ia
 		if(index == last_ia){
@@ -1072,26 +1117,26 @@ function editProducts(pid) {
 			
 		}
 		
-		
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>Integrated Address: "+iadd.iaddr+"</label>";
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>Comment: "+iadd.comment+"</label>";
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>Ask Amount: "+iadd.ask_amount+ " - (" + niceRound( iadd.ask_amount * .00001) + " Dero)"+"</label>";
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>Port: "+iadd.port+"</label>";
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "Status Active?: ";
+		let ia_record = "<div class='edit_i_address'><label class='edit_i_address_address'>Integrated Address: "+iadd.iaddr+"</label>";
+		ia_record += "<label>Comment: "+iadd.comment+"</label>";
+		ia_record += "<label>Ask Amount: "+iadd.ask_amount+ " - (" + niceRound( iadd.ask_amount * .00001) + " Dero)"+"</label>";
+		ia_record += "<label>Port: "+iadd.port+"</label>";
+		ia_record += "Status Active?: ";
 		let checkbox = '<input class="out_message_uuid" name="iaddress_status['+iadd.id+']" '+(iadd.status == 1?"checked":"")+' type="checkbox" >';
 		
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += checkbox+"<br>";
+		ia_record += checkbox+"<br>";
 		
 		let ia_scid_input = '<input class="ia_scid" name="ia_scid['+iadd.id+']" value="'+iadd.ia_scid+'" type="text" >';
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>SCID: "+ia_scid_input+"</label>";
+		ia_record += "<label>SCID: "+ia_scid_input+"</label>";
 		
 		let ia_respond_amount_input = '<input class="ia_respond_amount" name="ia_respond_amount['+iadd.id+']" value="'+iadd.ia_respond_amount+'" type="text" oninput="convert(this)">';
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "<label>SCID Respond Amount: "+ia_respond_amount_input+'<span class="token_units">('+ niceRound(iadd.ia_respond_amount * .00001)+' Token)</span></label>';
+		ia_record += "<label>SCID Respond Amount: "+ia_respond_amount_input+'<span class="token_units">('+ niceRound(iadd.ia_respond_amount * .00001)+' Token)</span></label>';
 		
 		let inv_input = '<input class="ia_inventory" name="ia_inventory['+iadd.id+']" value="'+iadd.ia_inventory+'" type="text" >';
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML += "Inventory: "+inv_input+"<br>";
-		edit_product_modal.querySelector("#integrated_addresses").innerHTML +=  '<button onclick="deleteIA('+iadd.id+')" class="delete_button" >Delete I.A.</button>'+"<hr>";
-		
+		ia_record += "Inventory: "+inv_input+"<br>";
+		ia_record +=  '<button onclick="deleteIA('+iadd.id+')" class="delete_button" >Delete I.A.</button>';
+		ia_record +="</div>";
+		edit_product_modal.querySelector("#integrated_addresses").innerHTML += ia_record;
 	});
 	
 	//Now run the same function that the select event triggers
