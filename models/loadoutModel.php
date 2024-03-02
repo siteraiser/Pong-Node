@@ -17,13 +17,9 @@ class loadoutModel extends App {
 
 	function getTransactionList(){
 		$stmt=$this->pdo->prepare("
-		SELECT i.*, ia.* , res.*, p.*, res.out_message AS res_out_message
+		SELECT i.*, res.*, res.out_message AS res_out_message
 		FROM incoming as i 
-		LEFT JOIN products as p 
-		ON (i.for_product_id = p.id)
-		LEFT JOIN i_addresses as ia 
-		ON (i.amount = ia.ask_amount AND i.port = ia.port AND p.id = ia.product_id)
-		LEFT JOIN orders as o
+		RIGHT JOIN orders as o
 		ON FIND_IN_SET(i.id, o.incoming_ids)
 		INNER JOIN responses as res 
 		ON (o.id = res.order_id) 
