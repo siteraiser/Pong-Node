@@ -285,6 +285,51 @@ class webApiModel extends App{
 
 	}
 	
+	//Deletes a product from website
+	function deleteProduct($product_id){
+	
+			
+		$data = [];	
+		$data["method"] = "submitProduct";
+		
+		$params=[];
+		$params["id"] = $product_id;
+		$params["action"] = 'delete';
+		
+		$data["params"] = (object)$params;
+		
+		$json = json_encode($data);
+
+		$ch = curl_init($this->api_url);
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS,$json);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [ 		
+			"Authorization: Basic " . base64_encode($this->user.':'.$this->id),
+			"Content-Type: application/json"
+		]);
+
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+		$output = curl_exec($ch);
+		
+		$error = $this->connectionErrors($ch);
+
+		curl_close($ch);
+		$jresult = json_decode($output);
+		if($output!='' && $jresult != ''){
+			if($jresult->success != true && $error ==''){
+				$error = 'API Error';
+			}
+		}else{
+			$error = 'No Response';
+		}
+		$this->logRequest($this->api_url,$json,$error,'submitProduct',$product_id);
+		
+		return $output;
+
+	}
+	
+	
+	
 	function submitIAddress($i_address){
 		
 		$data = [];	
@@ -329,11 +374,59 @@ class webApiModel extends App{
 		}else{
 			$error = 'No Response';
 		}
-		$this->logRequest($this->api_url,$json,$error,'submitIAddress',$i_address['id']);
+		$this->logRequest($this->api_url,$json,$error,'submitIAddress',$i_address_id);
 
 		return $output;
 
 	}	
+	
+	
+	function deleteIAddress($i_address_id){
+		
+		$data = [];	
+		$data["method"] = "submitIAddress";
+		//this is goofy... but tested lols
+		$params=[];
+		$params["id"] = $i_address_id;	
+		$params["action"] = 'delete';	
+		
+		$data["params"] = (object)$params;
+
+		$json = json_encode($data);
+
+		$ch = curl_init($this->api_url);
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS,$json);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [ 		
+			"Authorization: Basic " . base64_encode($this->user.':'.$this->id),
+			"Content-Type: application/json"
+		]);
+
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+		$output = curl_exec($ch);
+		
+		$error = $this->connectionErrors($ch);
+
+		curl_close($ch);
+		
+		
+		$jresult = json_decode($output);
+		if($output!='' && $jresult != ''){
+			
+			if($jresult->success != true && $error ==''){
+				$error = 'API Error';
+			}
+		}else{
+			$error = 'No Response';
+		}
+		$this->logRequest($this->api_url,$json,$error,'submitIAddress',$i_address['id']);
+
+		return $output;
+
+	}		
+	
+	
+	
 	
 	function checkIn(){
 	
