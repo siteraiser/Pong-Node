@@ -1,6 +1,11 @@
-<!doctype html>
-<html>
-<head>
+<!DOCTYPE html>
+<html lang="en-us" xmlns="http://www.w3.org/1999/xhtml" prefix="og: http://ogp.me/ns#">
+    <head>	
+   <meta charset="utf-8">
+    <title>Dero Pong Node</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
 <style>
 body{
 	color:gold;
@@ -46,7 +51,7 @@ body{
 
 
 	
-.modal label{
+.modal label,div.uuid{
 	display:block;
 	margin: 5px;
 }
@@ -534,7 +539,7 @@ function createTable(table_data) {
     var reader = new FileReader();
 			reader.onload = function(e) {
 				//SaveName(file.name);
-				 var img = document.querySelector('img');
+				 var img = document.querySelector('#img');
 				 img.src = e.target.result;
 				 resize();
 			}
