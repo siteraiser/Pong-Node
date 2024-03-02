@@ -216,4 +216,50 @@ echo'</pre>';
 			return ["success"=>false,"errors"=>$errors,"failed_ia_ids"=>$failed_ia_ids];
 		}
 	}
+	
+	
+	
+	function deleteIntegratedAddress($id){
+		$this->loadModel("deleteProductModel");
+		$this->loadModel("productModel");
+		$this->loadModel("webApiModel");		
+		$product_id = $this->deleteProductModel->deleteIntegratedAddress($id);
+		if(is_array($product_id)){
+			$errors = $product_id;
+		}
+		
+		if(empty($errors)){
+			$this->webApiModel->deleteIAddress($i_address);
+			
+			$product_results = $this->productModel->getProductsList();
+			foreach ($product_results as &$product){
+				$product['iaddress'] = $this->productModel->getIAddresses($product['id']);		
+			}
+			return ["success"=>true,"products"=>$product_results];
+		}else{	
+			return ["success"=>false,"errors"=>$errors];
+		}
+	}
+	
+	function deleteProduct($product_id){
+		$this->loadModel("deleteProductModel");
+		$this->loadModel("productModel");
+		$this->loadModel("webApiModel");
+		 
+		
+		$errors = $this->deleteProductModel->deleteProduct($product_id);
+		
+		if(empty($errors)){
+			$this->webApiModel->deleteProduct($product_id);
+			$product_results = $this->productModel->getProductsList();
+			foreach ($product_results as &$product){
+				$product['iaddress'] = $this->productModel->getIAddresses($product['id']);		
+			}
+			return ["success"=>true,"products"=>$product_results];
+		}else{	
+			return ["success"=>false,"errors"=>$errors];
+		}
+	}	
+	
+	
 }
