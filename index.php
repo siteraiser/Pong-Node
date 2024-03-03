@@ -15,7 +15,7 @@ body{
 
 #main div{
 	border:1px solid grey;
-	padding:10px;
+	padding:5px;
 	
 }
 #main > div{
@@ -78,7 +78,7 @@ body{
 	 overflow-wrap: break-word;
 	 line-height: 1.7em;
 }
-.modal input,textarea,select{
+.modal input,.modal textarea,.modal select{
 	background: black;
     color: #56ff04;
     padding: 5px;
@@ -89,7 +89,9 @@ select option{
 .modal fieldset{
 	margin:0 -5px;
 }
-
+.modal input[type='number']{
+	width:100px;
+}
 
 
 
@@ -319,8 +321,8 @@ div.tip{
 			<input id="api_url" name="api_url" type="text" maxlength="128">
 		</label>	
 		
-		<label>Respond Amount (atomic units, Dero if not a Token transfer)
-			<input id="respond_amount"class="atomic_units" name="respond_amount" type="number" step="1"> <span class="token_units"></span>
+		<label>Respond Amount (atomic units)
+			<input id="edit_respond_amount"class="atomic_units" name="respond_amount" type="number" step="1"> <span class="token_units"></span>
 		</label>
 		<label>Inventory
 			<input id="inventory" name="inventory" type="number" step="1"> <span class="info inventory_info">i</span>
@@ -638,8 +640,9 @@ function niceRound(number){
 	return Math.round(number*100000000)/100000000;
 }
 function convert(input){	
+
 	var unit_of_account = 'Token';
-	if(input.classList.contains("dero")){
+	if(input.classList.contains("dero") || input.parentElement.parentElement.querySelector("select[name='p_type']").value !='token'){
 		unit_of_account = 'Dero';
 	}
 	var atunits = input.value;
@@ -688,8 +691,10 @@ function typeSelect(data,stored_value=''){
 	var modal;
 	if(id=='p_type'){
 		modal = add_product_modal;		
+		convert(add_product_modal.querySelector("#respond_amount"));
 	}else if(id=='edit_p_type'){
 		modal = edit_product_modal;
+		convert(edit_product_modal.querySelector("#edit_respond_amount"));
 	}
 	modal.querySelector('div.uuid').classList.remove("hidden");
 	modal.querySelectorAll('label').forEach((label) => {
@@ -864,7 +869,7 @@ function generateProduct(product) {
 	
 	button.appendChild(edit);
 	main.appendChild(button);
-	div.innerHTML = (product.image == null ? '' : "<img style='max-height:50px;' src=" +product.image+">");
+	div.innerHTML = ((product.image == null || product.image == '') ? '' : "<img style='max-height:50px;' src=" +product.image+">");
 	div.appendChild(createSection("Type: " +product.p_type));
 	div.appendChild(createSection("Label: " +product.label));
 	div.appendChild(createSection("Details: " +product.details));	
@@ -1105,8 +1110,8 @@ function editProducts(pid) {
 	
 	edit_product_modal.querySelector("#edit_scid").value = editing.scid;	
 	
-	edit_product_modal.querySelector("#respond_amount").value = editing.respond_amount;
-	convert(edit_product_modal.querySelector("#respond_amount"));
+	edit_product_modal.querySelector("#edit_respond_amount").value = editing.respond_amount;
+	convert(edit_product_modal.querySelector("#edit_respond_amount"));
 	edit_product_modal.querySelector("#inventory").value = editing.inventory;	
 	
 	edit_product_modal.querySelector("#integrated_addresses").innerHTML ='';
