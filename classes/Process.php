@@ -622,7 +622,7 @@ class Process extends App {
 		$transfer['out_message'] = $settings['out_message'];				
 			
 		//Check for a pending response for this incoming tx
-		$pending_response = $this->processModel->checkForResponseById($tx['id']);
+		$pending_response = $this->processModel->checkForResponseById($tx['order_id']);
 		if($pending_response !==false){
 			//Found a previous repsonse, use that instead of a new one (in case of double response we want the same confirmation number for address submission)
 			$transfer['out_message'] = $pending_response['out_message'];
@@ -696,7 +696,7 @@ class Process extends App {
 	
 			
 		//Check for a pending response for this incoming tx
-		$pending_response = $this->processModel->checkForResponseById($tx['id']);
+		$pending_response = $this->processModel->checkForResponseById($tx['order_id']);
 		if($pending_response !==false){
 			//Found a previous repsonse, use that instead of a new one (in case of double response we want the same confirmation number for address submission)
 			$transfer['out_message'] = $pending_response['out_message'];
