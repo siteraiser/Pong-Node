@@ -266,7 +266,7 @@ class deroApiModel extends App{
 	}
 	/*********************************************************************/
 	/* Creates a transfer to respond to new sales (destination address). */ 
-	/* Transfers can transfer tokens of provided SCID instead of Dero    */
+	/* Transfers can transfer a SCID (not setup for that currently).     */
 	/* 128 bytes max for the out message (link or uuid etc).             */
 	/* Amount should be at least .00001 dero or 1 deri.                  */
 	/*********************************************************************/
@@ -283,7 +283,7 @@ class deroApiModel extends App{
 		$data["method"] = "transfer";
 		
 		$params = [];
-		$params["ringsize"] = 16;
+		$params["ringsize"] = 8;
 		$params["transfers"] = $transfers_array;
 		
 		$data["params"] = (object)$params;
@@ -307,6 +307,75 @@ class deroApiModel extends App{
 		return $output;
 
 	}
+
+
+
+	function transferOwnership($transfer){	
+
+		$data = [];
+		$data["jsonrpc"] = "2.0";
+		$data["id"] = "0";
+		$data["method"] = "transfer";
+		//$data["amount"] = 2;
+		$params = [];
+		$params["ringsize"] = 2;	
+		
+		
+		$payload_rpc = [];
+		$payload_rpc[] = 
+			(object)[
+			"name"=>"C",
+			"datatype"=>"S",
+			"value"=>$transfer->out_message
+			];
+		
+		$transfers_array[] = 
+			(object)[
+			"amount"=>(int)$transfer->respond_amount,
+			"destination"=>$transfer->address,
+			"payload_rpc"=>$payload_rpc
+			];
+	
+		$params["transfers"] = $transfers_array;
+		
+		$params["scid"] = $transfer->scid;
+	
+		$sc_rpc_array[] = 
+			(object)[
+			"name"=>"entrypoint",
+			"datatype"=>"S",
+			"value"=>'TransferOwnership'
+			];
+		$sc_rpc_array[] = 
+			(object)[
+			"name"=>"newowner",
+			"datatype"=>"S",
+			"value"=>$transfer->address
+			];
+		$params["sc_rpc"] = $sc_rpc_array;
+		
+		$data["params"] = (object)$params;
+		
+
+	$json = json_encode($data);
+
+		$ch = curl_init("http://127.0.0.1:10103/json_rpc");
+		curl_setopt($ch, CURLOPT_POST, true);
+		curl_setopt($ch, CURLOPT_POSTFIELDS,$json);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, [ 		
+			"Authorization: Basic " . base64_encode('secret:pass'),
+			"Content-Type: application/json"
+		]);
+
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); 
+		$output = curl_exec($ch);	
+		curl_close($ch);
+		connectionErrors($ch);
+
+		return $output;
+
+	}
+/**/
 
 }
 
