@@ -537,7 +537,7 @@ class processModel extends App {
 		}
 	}
 
-	function checkForResponseById($order_id){
+	function checkForPendingResponseByOrderId($order_id){
 
 		$stmt=$this->pdo->prepare("SELECT * FROM responses WHERE order_id = ? AND confirmed = '0'");
 		$stmt->execute([$order_id]);		
@@ -547,11 +547,11 @@ class processModel extends App {
 		
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 	}
-
+	
 
 	function saveResponse($response){
 		//See if a response record exists, if so just update the txid (this way only the original uuid is used)
-		$responseRecord = $this->checkForResponseById($response->order_id);
+		$responseRecord = $this->checkForPendingResponseByOrderId($response->order_id);
 		if($responseRecord !== false){
 			$this->updateResponseTX($response);
 			return true;
