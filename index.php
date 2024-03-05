@@ -26,7 +26,7 @@ body{
 }
 #main > div > div > div > div{
 	border:none;
-	padding:10px;
+	padding:5px;
 }
 #main > button{
 	position:relative;
@@ -216,10 +216,11 @@ div.tip{
 	<form>
 		<label>Product Type
 			<select name="p_type" id="p_type">
-				<option value="general">General</option>
+				<option value="">Select Product Type</option>
 				<option value="physical">Physical Goods</option>
 				<option value="digital">Digital Goods</option>
 				<option value="token">Token</option>
+				<option value="smartcontract">S.C. Ownership Transfer</option>
 			</select>
 		</label>
 		<label>Product Label
@@ -275,10 +276,11 @@ div.tip{
 		<input id="pid" name="pid" type="hidden">
 		<label>Product Type
 			<select name="p_type" id="edit_p_type">
-				<option value="general">General</option>
+				<option value="">Select Product Type</option>
 				<option value="physical">Physical Goods</option>
 				<option value="digital">Digital Goods</option>
 				<option value="token">Token</option>
+				<option value="smartcontract">S.C. Ownership Transfer</option>
 			</select>
 		</label>
 		
@@ -338,7 +340,7 @@ div.tip{
 
 <script>
 //dir = document.location.pathname.split('/', 2);
-var dir = '';
+var dir = '/pong';
 //manage the views
 var viewing_state = 'products';
 var menu = document.getElementById("menu");
@@ -513,7 +515,7 @@ function createTable(table_data) {
 		td +='<td>'+ val.ia_comment + '</td>';
 		td +='<td>'+ val.amount + ' (' + niceRound( val.amount * .00001) + ' Dero)' + '</td>';
 		td +='<td>'+  val.res_out_message + '</td>';
-		td +='<td>'+ val.out_amount + ' (' + niceRound( val.out_amount * .00001) + (val.type == 'sc_sale'? ' Token': ' Dero') + ')</td>';		
+		td +='<td>'+ val.out_amount + ' (' + niceRound( val.out_amount * .00001) + (val.type == 'token_sale'? ' Token': ' Dero') + ')</td>';		
 		td +='<td>'+ val.buyer_address + '</td>';
 		td +='<td style="white-space:pre">'+ val.ship_address + '</td>';
 		td +='<td>'+ val.txid + '</td>';
@@ -666,9 +668,9 @@ input.addEventListener('blur', callConvert, false);
 var p_type = document.getElementById("p_type");
 var edit_p_type = document.getElementById("edit_p_type");
 
-p_type.value='general';
+p_type.value='';
 //reset on page reload
-typeSelect('','general');
+typeSelect('','');
 //input[value="physical"] ~ input#scid{display:none;}
 p_type.addEventListener("change", typeSelect );
 
@@ -677,10 +679,10 @@ edit_p_type.addEventListener("change", typeSelect,getStringSize );
 
 
 
-function typeSelect(data,stored_value=''){
+function typeSelect(data,stored_value=false){
 	let id,value;
 	
-	if(stored_value ==''){
+	if(stored_value ===false){
 		id = data.target.id;
 		value = data.target.value;
 	}else{
@@ -701,7 +703,7 @@ function typeSelect(data,stored_value=''){
 		label.classList.remove("hidden");
 	});
 	
-	if(value == "general"){
+	if(value == ""){
 		modal.querySelector('input[name="out_message"]').placeholder='';	
 	}	
 	if(value == "physical"){	
@@ -738,7 +740,16 @@ function typeSelect(data,stored_value=''){
 			modal.querySelector('input[name="api_url"]').value ='';
 		}
 	}	
-	
+	if(value == "smartcontract"){		
+		hideUUIDField(id,modal);
+		hideAPIURLFields(id,modal);
+		modal.querySelector('input[name="out_message"]').placeholder='Blank for SCID or add custom message';
+		if(id == 'p_type'){
+			modal.querySelector('input[name="out_message"]').value ='';
+			modal.querySelector('input[name="out_message_uuid"]').checked =false;
+			modal.querySelector('input[name="api_url"]').value ='';
+		}
+	}	
 }
 
 
@@ -1140,7 +1151,7 @@ function editProducts(pid) {
 		ia_record += "<label>SCID: "+ia_scid_input+"</label>";
 		
 		let ia_respond_amount_input = '<input class="ia_respond_amount" name="ia_respond_amount['+iadd.id+']" value="'+iadd.ia_respond_amount+'" type="text" oninput="convert(this)">';
-		ia_record += "<label>SCID Respond Amount: "+ia_respond_amount_input+'<span class="token_units">('+ niceRound(iadd.ia_respond_amount * .00001)+' Token)</span></label>';
+		ia_record += "<label>SCID Respond Amount: "+ia_respond_amount_input+'<span class="token_units">('+ niceRound(iadd.ia_respond_amount * .00001)+' '+(editing.p_type == 'token'?'Token':'Dero')+')</span></label>';
 		
 		let inv_input = '<input class="ia_inventory" name="ia_inventory['+iadd.id+']" value="'+iadd.ia_inventory+'" type="text" >';
 		ia_record += "Inventory: "+inv_input+"<br>";
