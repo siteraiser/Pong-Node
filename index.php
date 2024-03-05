@@ -340,7 +340,7 @@ div.tip{
 
 <script>
 //dir = document.location.pathname.split('/', 2);
-var dir = '/pong';
+var dir = '';
 //manage the views
 var viewing_state = 'products';
 var menu = document.getElementById("menu");
