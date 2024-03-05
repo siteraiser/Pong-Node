@@ -38,11 +38,11 @@ class addProductModel extends App {
 	}
 
 
-
+//also in edit products model
 	function integratedAddressExists($iaddr){
 
 		$stmt=$this->pdo->prepare("SELECT * FROM i_addresses INNER JOIN products ON i_addresses.product_id = products.id 
-		WHERE iaddr = ? ");//AND i_addresses.status = '1'
+		WHERE iaddr = ? AND i_addresses.status = '1'");//
 		$stmt->execute([$iaddr]);		
 		if($stmt->rowCount()==0){
 			return false;
@@ -52,13 +52,13 @@ class addProductModel extends App {
 		return $row['comment'];
 	}
 
-
+//also in edit products model
 	function portExists($port,$ask_amount){
 
 		$stmt=$this->pdo->prepare(
 		"SELECT * FROM i_addresses 	
 		INNER JOIN products ON i_addresses.product_id = products.id 
-		WHERE i_addresses.port = ? AND i_addresses.ask_amount = ?");
+		WHERE i_addresses.port = ? AND i_addresses.status = '1' AND i_addresses.ask_amount = ?");
 		$stmt->execute([$port,$ask_amount]);		
 		if($stmt->rowCount()==0){
 			return false;
