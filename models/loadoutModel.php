@@ -23,7 +23,7 @@ class loadoutModel extends App {
 		ON FIND_IN_SET(i.id, o.incoming_ids)
 		INNER JOIN responses as res 
 		ON (o.id = res.order_id) 
-		WHERE res.type = 'sale' OR res.type = 'sc_sale'
+		WHERE res.type = 'sale' OR res.type = 'token_sale' OR res.type = 'sc_sale'
 		");
 		$stmt->execute(array());
 		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
