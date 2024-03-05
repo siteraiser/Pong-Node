@@ -118,7 +118,7 @@ class editProductModel extends App {
 		return $this->pdo->lastInsertId('id');
 	}
 
-
+//also in add products model
 	function integratedAddressExists($iaddr){
 
 		$stmt=$this->pdo->prepare("SELECT * FROM i_addresses INNER JOIN products ON i_addresses.product_id = products.id 
@@ -143,7 +143,7 @@ class editProductModel extends App {
 		return $stmt->fetch(PDO::FETCH_ASSOC);
 	}
 
-
+//also in add products model
 	function portExists($port,$ask_amount){
 
 		$stmt=$this->pdo->prepare(
