@@ -13,7 +13,7 @@ class Product extends App {
 
 
 		if(!empty($_POST)){
-			if($_POST['comment']=='' || $_POST['ask_amount'] == '' || $_POST['ask_amount'] < 1 || $_POST['port'] ==  '' ){		
+			if($_POST['p_type']=='' || $_POST['comment']=='' ||  $_POST['ask_amount'] == '' || $_POST['ask_amount'] < 1 || $_POST['port'] ==  '' ){		
 				if($_POST['ask_amount'] < 1){
 					$errors[] = "Minumum Ask Amount is 1";
 				}else{
@@ -92,7 +92,7 @@ var_dump($_POST['image']);
 echo'</pre>';
 */
 		if(!empty($_POST)){			
-			if($_POST['comment']=='' || $_POST['ask_amount'] ==  '' || $_POST['ask_amount'] < 1 || $_POST['port'] ==  '' ){		
+			if($_POST['p_type']=='' || $_POST['comment']=='' || $_POST['ask_amount'] ==  '' || $_POST['ask_amount'] < 1 || $_POST['port'] ==  '' ){		
 				if($_POST['ask_amount'] < 1){
 					$errors[] = "Minumum Ask Amount is 1";
 				}else{
