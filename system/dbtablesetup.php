@@ -6,6 +6,7 @@ CREATE TABLE settings (
 	id smallint(6) unsigned NOT NULL auto_increment,
 	name varchar(100) NULL,
 	value varchar(200) NULL,
+	type varchar(100) NULL,
 	PRIMARY KEY (id)
 ) ENGINE=InnoDB;
 
@@ -76,7 +77,6 @@ CREATE TABLE responses (
 	id smallint(6) unsigned NOT NULL auto_increment,
 	order_id smallint(6) unsigned NOT NULL,
 	txid varchar(150) NULL,
-	txids varchar(2000) NULL,
 	type varchar(150) NULL,
 	buyer_address varchar(100) NULL,
 	out_amount int(25) unsigned,
@@ -111,10 +111,10 @@ EOD;
 
 
 $result = $this->pdo->query("SHOW TABLES LIKE 'products'");
-if($result !== false && $result->rowCount() > 0){	
-}else{
+if($result == false || $result->rowCount() == 0){	
 	//create tables
 	$result = $this->pdo->query($table_setup);
+	
 	//save time installed
 	$given = new DateTime();
 	$given->setTimezone(new DateTimeZone("UTC"));
@@ -122,13 +122,19 @@ if($result !== false && $result->rowCount() > 0){
 	//set a checkin time in the future
 	$given->modify('+5 minutes');
 	$next_checkin_utc = $given->format("Y-m-d H:i:s");
+	
+	
+	
 	$this->pdo->query("
 	INSERT INTO settings (name,value) VALUES('install_time_utc','$startup_time');
+
+
+	INSERT INTO settings (name,value) VALUES('daemon_api','node.derofoundation.org:11012');
 	
-	INSERT INTO settings (name,value) VALUES('dero_api_ip','127.0.0.1');
-	INSERT INTO settings (name,value) VALUES('dero_api_port','10103');	
-	INSERT INTO settings (name,value) VALUES('dero_api_user','secret');
-	INSERT INTO settings (name,value) VALUES('dero_api_pass','pass');
+	INSERT INTO settings (name,value) VALUES('wallet_api_ip','127.0.0.1');
+	INSERT INTO settings (name,value) VALUES('wallet_api_port','10103');	
+	INSERT INTO settings (name,value) VALUES('wallet_api_user','secret');
+	INSERT INTO settings (name,value) VALUES('wallet_api_pass','pass');
 
 	INSERT INTO settings (name,value) VALUES('web_api_url','https://ponghub.com/papi');
 	INSERT INTO settings (name,value) VALUES('web_api_user','Dero User Name');
@@ -136,11 +142,40 @@ if($result !== false && $result->rowCount() > 0){
 	INSERT INTO settings (name,value) VALUES('web_api_id','');
 	
 	INSERT INTO settings (name,value) VALUES('next_checkin_utc','$next_checkin_utc');
-	
+
 	");
 	
 }
 unset($table_setup);
 unset($result);
 
+
+$stmt=$this->pdo->prepare("SELECT * FROM settings WHERE name = 'start_balance'");
+$stmt->execute([]);		
+
+
+if($stmt->rowCount()==0){
+
+	$this->loadModel('walletApiModel');
+	$block_height = json_decode($this->walletApiModel->getHeight());
+	$balance = json_decode($this->walletApiModel->getBalance());	
+
+	if(!isset($balance->result->balance)){
+		if(isset($balance->error->message)){
+			$errors[] = $balance->error->message;
+		}
+		$errors[] = "Setup has failed to get the balance.";
+	}
+	if(empty($errors)){
+	$this->pdo->query("
+		INSERT INTO settings (name,value) VALUES('start_block','{$block_height->result->height}');
+		INSERT INTO settings (name,value) VALUES('last_synced_block','{$block_height->result->height}');
+		INSERT INTO settings (name,value) VALUES('start_balance','{$balance->result->balance}');
+		INSERT INTO settings (name,value) VALUES('last_synced_balance','{$balance->result->balance}');
+	");
+	}
+	
+	
+}	
+	
 ?>
