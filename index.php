@@ -644,9 +644,30 @@ function niceRound(number){
 function convert(input){	
 
 	var unit_of_account = 'Token';
-	if(input.classList.contains("dero") || input.parentElement.parentElement.querySelector("select[name='p_type']").value !='token'){
+	
+	
+	
+	if(input.classList.contains("dero")){
 		unit_of_account = 'Dero';
 	}
+	
+	
+	
+	if(input.parentElement.parentElement.querySelector("select[name='p_type']")){
+		let selel = input.parentElement.parentElement.querySelector("select[name='p_type']");
+		if(selel.value !='token'){
+			unit_of_account = 'Dero';
+		}
+	}
+	if(input.parentElement.parentElement.parentElement.querySelector("select[name='p_type']")){
+		let selel = input.parentElement.parentElement.parentElement.querySelector("select[name='p_type']");
+		if(selel.value !='token'){
+			unit_of_account = 'Dero';
+		}
+	}
+	
+	
+	
 	var atunits = input.value;
 	atunits = atunits * .00001;
 	atunits =  niceRound(atunits);
@@ -955,6 +976,17 @@ function initialize(runit) {
 		});
 
 		const result = await response.json();			
+		
+		let msgs = '';
+		if(typeof result.errors != 'undefined'){
+			for(var key in result.errors){
+				msgs += result.errors[key] +' ';				
+			}
+			if(msgs !=''){
+				messages.querySelector("#message_list").innerHTML = msgs;
+				messages.classList.remove("hidden");
+			}
+		}
 		//console.log("Success:", result);
 		api_url=result.api_url;
 
