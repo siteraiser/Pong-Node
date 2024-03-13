@@ -20,7 +20,7 @@ The refund rules... If there are no matching integrated addresses for the incomi
 You can resubmit / update your shipping address for any order uuid / crc32 (hopefully before the order is shipped if needed). Physical goods orders found in the same block will be rolled into one response with the uuid for entering shipping information.
 </p>
 <p>
-Registering with the pong hub is a one time affair where upon registration a unique id is assigned to the user and used thereforth for all later product submissions / updates. You can update / remove your Dero user name at any time but need to use the same wallet address. User names are now checked before submitting them to the server. If the username doesn't point to the wallet then the field is set to blank and on ly the raw address will be used.
+Registering with the pong hub is a one time affair where upon registration a unique id is assigned to the user and used thereforth for all later product submissions / updates. You can update / remove your Dero user name at any time but need to use the same wallet address. User names are now checked before submitting them to the server. If the username doesn't point to the wallet then the username field is set to blank and only the raw address will be used.
 </p>
 <p>
 After registering, the pong server will send a put message to the pong hub every 5 minutes to maintain its listings. If a half hour goes by without a check-in then that seller's products will be removed from the storefront.
