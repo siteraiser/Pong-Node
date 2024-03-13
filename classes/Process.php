@@ -1,28 +1,75 @@
 <?php
 class Process extends App {  
+	public $messages=[];
+	public $errors=[];
+	public $product_changes = false;
+	
+	function sendCheckin(){
+		//Check to make sure there aren't any missing transfers.
+		$last_synced_block = $this->processModel->getLastSyncedBlock();
+		//Get the new transactions, exclude the last synced block
+		$transfers_result = $this->walletApiModel->getAllTransfers($last_synced_block + 1);
+		$transfers_result = json_decode($transfers_result);
+		$balance_result = json_decode($this->walletApiModel->getBalance());
+
+		if(isset($transfers_result->result->entries) && isset($balance_result->result->balance)){
+			$balance = $balance_result->result->balance;
+			$saved_balance = $this->processModel->getLastSyncedBalance();
+			
+			//Go through and look for new transactions
+			foreach($transfers_result->result->entries as $entry){	
+				if($entry->incoming == true){
+					//Add to saved balance..
+					$saved_balance = (int)$saved_balance + (int)$entry->amount;
+				}else{
+					//Subtract from saved balance..
+					$saved_balance = (int)$saved_balance - (int)$entry->amount;
+					$saved_balance = (int)$saved_balance - (int)$entry->fees;
+				}
+				//Remember the last synced block
+				$last_synced_block = $entry->topoheight;
+			}
+			
+			if($saved_balance == $balance && $saved_balance !== false){
+				//Update sync records
+				$this->processModel->saveSyncedData($saved_balance,$last_synced_block);
+			}else if($saved_balance === false){
+				$this->errors[] = 'Error getting synced balance, make sure try reloading the page and wallet to complete setup.';
+			}else{
+				$this->errors[] = 'Missing TX, balance is not synced with amount! Find a full node and re-install wallet if necessary.';
+			}
+			
+		}else if(isset($balance_result->error->message)){
+			$this->errors[] = "Error Checking Balance: " . $balance_result->error->message;
+		}else if($transfers_result === NULL){
+			$this->errors[] = "Wallet connection error. Couldn't get balance. Ensure cyberdeck or equivalent is setup or logout and log back into wallet.";
+		}else if(!isset($transfers_result->result)){
+			$this->errors[] = 'Error checking transfers and balance';
+		}	
+		//Try checkin if it is time.
+		if($this->processModel->nextCheckInTime() && empty($this->errors)){
+			$this->webApiModel->checkIn();
+		}//else{delist...}			
+	}
 	
 	
 	function transactions(){
 		$this->loadModel("processModel");
-		$this->loadModel("deroApiModel");
-		$this->loadModel("webApiModel");
+		$this->loadModel("walletApiModel");
+		$this->loadModel("webApiModel");		
 		$this->loadModel("productModel");
-
-
+		
+		
 
 		//Retry all failed webapi calls.
 		$this->webApiModel->tryPending();
-		//Try checkin if it is time.
-		if($this->processModel->nextCheckInTime()){
-			$this->webApiModel->checkIn();
-		}			
 		
+		//Save start variables about installation
 		$this->processModel->setInstalledTime();
-		//Define arrays for returning to frond end.
-		$product_changes = false;
-		//$return_actions = [];
-		$messages = [];
-		$errors = [];
+		
+		//Still need to check if all adds up before check-in 
+		$this->sendCheckin();
+		
 		
 		
 		/*******************************/
@@ -30,7 +77,7 @@ class Process extends App {
 		/** transfers have confirmed  **/
 		/*******************************/
 		$t_block_height='';
-		$result_str = $this->deroApiModel->getHeight();
+		$result_str = $this->walletApiModel->getHeight();
 		$heightRes = json_decode($result_str);
 		if(!isset($heightRes->errors) && isset($heightRes->result)){	
 			$t_block_height = $heightRes->result->height;	
@@ -53,36 +100,39 @@ class Process extends App {
 			
 			//make sure the response is at least one block old before checking.
 			if($response['time_utc'] < $time_utc && $response['t_block_height'] < $t_block_height){
-				$confirmed = false;
-				$alltxids=[];
-				$alltxids= explode(",",$response['txids']);
-				
-				foreach($alltxids as $rtxid){
-					if(!$confirmed){
-						$check_transaction_result = $this->deroApiModel->getTransferByTXID($rtxid);
-						$check_transaction_result = json_decode($check_transaction_result);
+	
+				$check_transaction_result = $this->walletApiModel->getTransferByTXID($response['txid']);
+				$check_transaction_result = json_decode($check_transaction_result);
 					
-						
-						//succesfully confirmed 
-						if(!isset($check_transaction_result->errors) && isset($check_transaction_result->result)){		
-							$confirmed = true;
-							$this->processModel->markResAsConfirmed($response['txid']);	
-							
-							if($response['txid'] == $rtxid){
-								//Same txid, good to go!
-								$confirmed_txns[] = $response['txid'];
-							}else{									
-								//Update the txid to the first one that confirmed. (allow later ones to fail and not be retried)
-								$this->processModel->updateResponseTXID($response['txid'],$rtxid);								
-								$confirmed_txns[] = $rtxid;
-							}							
+				//succesfully confirmed 
+				if(!isset($check_transaction_result->errors) && isset($check_transaction_result->result)){		
+					$this->processModel->markResAsConfirmed($response['txid']);	
+					$confirmed_txns[] = $response['txid'];
+				}else{
+					//not found in wallet yet, check with daemon
+					$this->loadModel("daemonApiModel");
+					$tx_pool_result = json_decode($this->daemonApiModel->getTxPool());
+					$pool_array=[];
+					if(isset($tx_pool_result->result->txs)){
+						$pool_array = $tx_pool_result->result->txs;
+					}	
+					if(!in_array($response['txid'],$pool_array)){
+						$tx_result = json_decode($this->daemonApiModel->getTX($response['txid']));
+						if(
+							($tx_result->result->txs[0]->in_pool == false && 
+							$tx_result->result->txs[0]->valid_block == '') ||
+							$tx_result->result->txs[0]->ignored == true 
+						){
+							//failed
+							$this->processModel->markOrderAsPending($response['txid']);	
 						}
+							//If it didn't fail then wait for it to show up in wallet to confirm (do nothing).
 					}
-				}
-				
-				if(!$confirmed){
-					//set the incoming to not processed, keep response record.
-					$this->processModel->markOrderAsPending($response['txid']);	
+					
+					
+					if(!isset($tx_pool_result->result->status)){
+						$this->errors[] = 'Error fetching tx pool';
+					}
 				}
 			}
 		}
@@ -93,7 +143,7 @@ class Process extends App {
 
 			foreach($confirmed_incoming as $record){
 				//does not inform when there is an inactive ia since it uses product id 0 and can't find the details...
-				$messages[] = $record['type']." confirmed for order txid:".$record['txid'];	
+				$this->messages[] = $record['type']." confirmed for order txid:".$record['txid'];	
 				
 				//send post message to web api here... 
 				if($record['out_message_uuid'] == 1 && $record['type'] == 'sale'){
@@ -112,7 +162,7 @@ class Process extends App {
 						$ia = $this->productModel->getIAddressById($record['for_ia_id']);
 						$this->webApiModel->submitIAddress($ia);
 						
-						$product_changes = true;
+						$this->product_changes = true;
 					}
 				}
 				
@@ -127,18 +177,19 @@ class Process extends App {
 		/******************************/
 		$address_submission_candidates=[];
 		//Get transfers and save them if they are new and later than the db creation time.	
-		$export_transfers_result = $this->deroApiModel->getTransfers();
+		$export_transfers_result = $this->walletApiModel->getInTransfers($this->processModel->start_block);
 
 	//	$export_transfers_result =file_get_contents('testjson.json');
 		
 		$export_transfers_result = json_decode($export_transfers_result);
-		//var_dump($export_transfers_result);
-		
-		
+	
 		if($export_transfers_result === NULL){
-			$errors[] = "Wallet Connection Error.";
+			$this->errors[] = "Wallet connection error. Couldn't get incoming txns. Ensure cyberdeck or equivalent is setup.";
 		}else if(isset($export_transfers_result->result->entries)){
-
+			//We have a transaction list...
+			
+			
+			//Go through and look for new transactions
 			foreach($export_transfers_result->result->entries as $entry){		
 				//See if there is a payload... todo: check if it is a shipping address submission
 				if(isset($entry->payload_rpc)){
@@ -150,7 +201,7 @@ class Process extends App {
 						$p_and_ia_ids = $this->processModel->insertNewTransaction($tx); //and do inventory first...						
 						//check type of inventory update... product or iaddress
 						if($p_and_ia_ids !== false){
-							$product_changes = true;
+							$this->product_changes = true;
 							//set changes to true to reload the products
 							if($p_and_ia_ids['id_type'] == 'p'){
 								$this->webApiModel->submitProduct($this->productModel->getProductById($p_and_ia_ids['p']));	
@@ -167,8 +218,13 @@ class Process extends App {
 					}
 				}
 			}
-		}	
+		}/*else{
 			
+			//maybe send a delist
+			$this->errors[] = "No Transaction List";
+			
+		}	
+		*/	
 		$address_arrays=[];
 		//Now do address submissions since old address submissions need to be filtered out first.
 		if(!empty($address_submission_candidates)){
@@ -188,7 +244,7 @@ class Process extends App {
 				//It is an address submission possibly
 				$saved = $this->processModel->saveAddress($latest_submission);
 				if($saved !== false){
-					$messages[] = "Shipping address submitted by buyer.";
+					$this->messages[] = "Shipping address submitted by buyer.";
 				}
 			}				
 		}
@@ -196,19 +252,19 @@ class Process extends App {
 			
 
 		//Make array of unprocessed transactions
-		$notProcessed=[];
+		$not_processed=[];
 		$new=$this->processModel->unprocessedTxs();
 		if($new !== false){
-			$notProcessed = $new;
+			$not_processed = $new;
 		}
 
-		/*************************/
-		/** Do regular products **/
-		/*************************/
+		/********************************/
+		/** Create Orders from new txs **/
+		/********************************/
 
 		$tx_list = [];
 
-		foreach($notProcessed as $tx){
+		foreach($not_processed as $tx){
 			
 			$settings = $this->processModel->getIAsettings($tx);
 	
@@ -249,7 +305,7 @@ class Process extends App {
 			
 			
 		}	
-		unset($notProcessed);
+		unset($not_processed);
 
 
 
@@ -366,7 +422,7 @@ class Process extends App {
 		*/
 		if(!empty($transfer_list)){
 			//Make sure wallet is working
-			$result_str = $this->deroApiModel->getHeight();
+			$result_str = $this->walletApiModel->getHeight();
 			$heightRes = json_decode($result_str);
 			if(!isset($heightRes->errors) && isset($heightRes->result)){	
 				$t_block_height = $heightRes->result->height;	
@@ -378,12 +434,12 @@ class Process extends App {
 				
 
 				//try the transfer
-				$payload_result = $this->deroApiModel->transfer($transfer_list);
+				$payload_result = $this->walletApiModel->transfer($transfer_list);
 				$payload_result = json_decode($payload_result);
 				
 				//Get the actual blockheight or just increment by 1 if it fails since we need to have a height to check for confirmation
 				$tbh = '';
-				$result_str = $this->deroApiModel->getHeight();
+				$result_str = $this->walletApiModel->getHeight();
 				$heightRes = json_decode($result_str);
 				if(!isset($heightRes->errors) && isset($heightRes->result)){	
 					$tbh = $heightRes->result->height;							
@@ -401,15 +457,15 @@ class Process extends App {
 					
 			}else{
 				if(isset($payload_result->error)){
-					$errors[] = "Error: ".$payload_result->error->message;
+					$this->errors[] = "Error: ".$payload_result->error->message;
 				}else{
-					$errors[] = "Unkown Transfer Error";
+					$this->errors[] = "Unkown Transfer Error";
 				}
 			}
 		}
 
 
-		if(empty($errors) && $responseTXID !== ''){
+		if(empty($this->errors) && $responseTXID !== ''){
 			foreach($pending_orders as $tx){
 				
 				//Mark incoming transaction as processed. 
@@ -452,7 +508,7 @@ class Process extends App {
 						$message_part = $tx['product_label']. ' ' . $details['ia_comment'];
 					}
 					
-					$messages[] = "{$tx['type']} response initiated". ($tx['type'] == 'sale' ? ' for "'.$message_part.'"' : '') . ".";
+					$this->messages[] = "{$tx['type']} response initiated". ($tx['type'] == 'sale' ? ' for "'.$message_part.'"' : '') . ".";
 					
 				}
 			}
@@ -519,7 +575,7 @@ class Process extends App {
 				$t_block_height='';
 					
 				//Make sure wallet is working
-				$result_str = $this->deroApiModel->getHeight();
+				$result_str = $this->walletApiModel->getHeight();
 				$heightRes = json_decode($result_str);
 				if(!isset($heightRes->errors) && isset($heightRes->result)){	
 					$t_block_height = $heightRes->result->height;	
@@ -528,12 +584,12 @@ class Process extends App {
 				$payload_result =null;
 				if(is_int($t_block_height)){
 					//try the transfer
-					$payload_result = $this->deroApiModel->transfer([$sc_transfer]);
+					$payload_result = $this->walletApiModel->transfer([$sc_transfer]);
 					$payload_result = json_decode($payload_result);
 					
 					//Get the actual blockheight or just increment by 1 if it fails since we need to have a height to check for confimation
 					$tbh = '';
-					$result_str = $this->deroApiModel->getHeight();
+					$result_str = $this->walletApiModel->getHeight();
 					$heightRes = json_decode($result_str);
 					if(!isset($heightRes->errors) && isset($heightRes->result)){	
 						$tbh = $heightRes->result->height;							
@@ -554,14 +610,14 @@ class Process extends App {
 				}else{
 					if(isset($payload_result->error)){
 						if(strstr($payload_result->error->message, "Insufficent funds")){
-							$errors[] = "Token Transfer Error. ".$payload_result->error->message;					
+							$this->errors[] = "Token Transfer Error. ".$payload_result->error->message;					
 							// Save incoming as successful = 2 to signal it was a not enough tokens error...Reprocess...
 							$this->processModel->markIncSuccessfulTwo($tx['id']);		
 						}else{
-							$errors[] = "Token Transfer Error. ".$payload_result->error->message;
+							$this->errors[] = "Token Transfer Error. ".$payload_result->error->message;
 						}
 					}else{						
-						$errors[] = "Unkown Transfer Error";
+						$this->errors[] = "Unkown Transfer Error";
 					}
 				}
 				
@@ -594,7 +650,7 @@ class Process extends App {
 						
 					$this->processModel->saveResponse($response);
 						
-					$messages[] = "{$tx['type']} response initiated for: {$tx['respond_amount']}". ($tx['type'] == 'token_sale' ? ' for "'.$tx['ia_comment'].'"' : '') . ".";
+					$this->messages[] = "{$tx['type']} response initiated for: {$tx['respond_amount']}". ($tx['type'] == 'token_sale' ? ' for "'.$tx['ia_comment'].'"' : '') . ".";
 				
 					}
 				
@@ -664,7 +720,7 @@ class Process extends App {
 				$t_block_height='';
 					
 				//Make sure wallet is working
-				$result_str = $this->deroApiModel->getHeight();
+				$result_str = $this->walletApiModel->getHeight();
 				$heightRes = json_decode($result_str);
 				if(!isset($heightRes->errors) && isset($heightRes->result)){	
 					$t_block_height = $heightRes->result->height;	
@@ -675,16 +731,16 @@ class Process extends App {
 					//try the transfer
 					if($tx['type'] != "sc_ownership_transfer_refund"){
 						//run ownership transfer
-						$payload_result = $this->deroApiModel->transferOwnership($sc_transfer);
+						$payload_result = $this->walletApiModel->transferOwnership($sc_transfer);
 					}else{
 						//dispatch a refund
-						$payload_result = $this->deroApiModel->transfer([$sc_transfer]);
+						$payload_result = $this->walletApiModel->transfer([$sc_transfer]);
 					}
 					$payload_result = json_decode($payload_result);
 					
 					//Get the actual blockheight or just increment by 1 if it fails since we need to have a height to check for confimation
 					$tbh = '';
-					$result_str = $this->deroApiModel->getHeight();
+					$result_str = $this->walletApiModel->getHeight();
 					$heightRes = json_decode($result_str);
 					if(!isset($heightRes->errors) && isset($heightRes->result)){	
 						$tbh = $heightRes->result->height;							
@@ -705,14 +761,14 @@ class Process extends App {
 				}else{
 					if(isset($payload_result->error)){
 						if(1){
-							$errors[] = "SC Ownership Transfer Error. ".$payload_result->error->message;					
+							$this->errors[] = "SC Ownership Transfer Error. ".$payload_result->error->message;					
 							// Save incoming as successful = 2 to signal it was a not enough tokens error...Reprocess...
 							$this->processModel->markIncSuccessfulTwo($tx['id']);		
 						}/*else{
-							$errors[] = "Token Transfer Error. ".$payload_result->error->message;
+							$this->errors[] = "Token Transfer Error. ".$payload_result->error->message;
 						}*/
 					}else{						
-						$errors[] = "Unkown Transfer Error";
+						$this->errors[] = "Unkown Transfer Error";
 					}
 				}
 				
@@ -745,7 +801,7 @@ class Process extends App {
 						
 					$this->processModel->saveResponse($response);
 						
-					$messages[] = "{$tx['type']} response initiated for: {$tx['respond_amount']}". ($tx['type'] == 'sc_sale' ? ' for "'.$tx['ia_comment'].'"' : '') . ".";
+					$this->messages[] = "{$tx['type']} response initiated for: {$tx['respond_amount']}". ($tx['type'] == 'sc_sale' ? ' for "'.$tx['ia_comment'].'"' : '') . ".";
 				
 					}
 				
@@ -757,14 +813,16 @@ class Process extends App {
 
 		}
 
-		if($product_changes){
+
+
+		if($this->product_changes){
 			$product_results = $this->productModel->getProductsList();
 			foreach ($product_results as &$product){
 				$product['iaddress'] = $this->productModel->getIAddresses($product['id']);		
 			}
-			return ["success"=>true,"messages"=>$messages,"errors"=>$errors,"products"=>$product_results];
+			return ["success"=>true,"messages"=>$this->messages,"errors"=>$this->errors,"products"=>$product_results];
 		}
-		return ["success"=>true,"messages"=>$messages,"errors"=>$errors];
+		return ["success"=>true,"messages"=>$this->messages,"errors"=>$this->errors];
 
 	}
 	
