@@ -12,7 +12,7 @@ Currently 4 products types supported.<br>
    <li>Smart Contract Ownership Transfer: Will run the TransferOwnership function using the buyer address in as the input for a "newowner" sc variable and send the scid as a comment. Ensure that you use inventory of one! Sometimes the ownership change is reflected in gnomen, not sure of the specifics there yet.</li>
 </ol>
 <p>
-The Pong Server inventory will check the product level inventory if specified will de-increment that first. If product level inventory is at 0 then it will see if there are Integrated Address level inventories and use those instead. If no inventory is found, a refund is issued. All inventory is updated immediately when a new transaction is detected and then sent to the website. Insufficient token fails set the incoming record as a failed transaction and sets status to false after the confirmation and updates the website (maybe could be done sooner).</p>
+The Pong Server inventory will check the product level inventory and if specified will de-increment that first. If product level inventory is at 0 then it will see if there are Integrated Address level inventories and use those instead. If no inventory is found, a refund is issued. All inventory is updated immediately when a new transaction is detected and then sent to the website. Insufficient token fails set the incoming record as a failed transaction and sets status to false after the confirmation and updates the website (maybe could be done sooner).</p>
 <p>
 The refund rules... If there are no matching integrated addresses for the incoming transaction, or the status is set to false, the inventory is at 0 or the token transfer fails, a full refund for the order amount is issued automatically.
 </p>
