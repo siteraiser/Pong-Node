@@ -1,10 +1,21 @@
 <?php 
 class Initialize extends App {  	
 	function getProducts(){
+		$errors =[];
 		require_once('system/dbtablesetup.php');
 		$this->loadModel("productModel");
 		$this->loadModel('settingsModel');
+		$this->loadModel('walletApiModel');
+		$this->loadModel('daemonApiModel');
 		
+		$result = json_decode($this->daemonApiModel->getBlockByHeight(420));
+		
+		if(isset($result->error->message)){
+			$errors[] ="Node ({$this->daemonApiModel->api_link}) is not a full node. ".$result->error->message;
+			//disable products...
+		}	
+
+	
 		$product_results = $this->productModel->getProductsList();		
 		
 		foreach ($product_results as &$product){
@@ -22,6 +33,6 @@ class Initialize extends App {
 			}
 		}
 
-		return ["api_url"=>$api_url,"products"=>$product_results];		
+		return ["api_url"=>$api_url,"errors"=>$errors,"products"=>$product_results];		
 	}
 }
