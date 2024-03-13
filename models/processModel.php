@@ -1,18 +1,64 @@
 <?php 
 class processModel extends App {  
 	public $installed_time_utc='';
+	public $start_block='';
 
 	function setInstalledTime(){
 
-		$stmt=$this->pdo->prepare("SELECT value FROM settings WHERE name = 'install_time_utc'");
+		$stmt=$this->pdo->prepare("SELECT name,value FROM settings WHERE name = 'install_time_utc' OR name = 'start_block'");
 		$stmt->execute([]);		
 		if($stmt->rowCount()==0){
 			return false;
 		}
-		$row = $stmt->fetch(PDO::FETCH_ASSOC);		
-		$this->installed_time_utc = $row['value'];
+		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);	
+		foreach($rows as $row){
+			if($row['name']=='install_time_utc'){
+				$this->installed_time_utc = $row['value'];
+			}else{
+				$this->start_block = $row['value'];
+			}	
+		}
 	}
 	
+	function getLastSyncedBlock(){
+
+		$stmt=$this->pdo->prepare("SELECT value FROM settings WHERE name = 'last_synced_block'");
+		$stmt->execute([]);		
+		if($stmt->rowCount()==0){
+			return false;
+		}
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+		return $row['value'];
+	}
+	
+	function getLastSyncedBalance(){
+
+		$stmt=$this->pdo->prepare("SELECT value FROM settings WHERE name = 'last_synced_balance'");
+		$stmt->execute([]);		
+		if($stmt->rowCount()==0){
+			return false;
+		}
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+		return $row['value'];
+	}
+	function saveSyncedData($saved_balance,$last_synced_block){
+		
+			$query="
+		UPDATE settings SET value=:last_synced_block WHERE name = 'last_synced_block';	
+		UPDATE settings SET value=:last_synced_balance WHERE name = 'last_synced_balance';	
+		";	
+		
+		$stmt=$this->pdo->prepare($query);
+		$stmt->execute(array(		
+			':last_synced_balance'=>$saved_balance,
+			':last_synced_block'=>$last_synced_block
+			));				
+					
+		if($stmt->rowCount()==0){
+			return false;
+		}
+		return true;	
+	}
 	
 	function nextCheckInTime(){
 		
@@ -434,8 +480,8 @@ class processModel extends App {
 
 	//check responses to ensure they went through, if not mark as not processed 
 	function unConfirmedResponses(){
-
-		$stmt=$this->pdo->prepare("SELECT DISTINCT txid,txids,time_utc,t_block_height FROM responses WHERE confirmed = '0'");
+		$stmt=$this->pdo->prepare("SELECT txid,time_utc,t_block_height FROM responses WHERE confirmed = '0'");
+		//$stmt=$this->pdo->prepare("SELECT DISTINCT txid,txids,time_utc,t_block_height FROM responses WHERE confirmed = '0'");
 		$stmt->execute([]);		
 		if($stmt->rowCount()==0){
 			return [];
@@ -495,7 +541,7 @@ class processModel extends App {
 
 
 
-
+/*
 	function getRespsonseTXIDS($order_id){
 
 		$stmt=$this->pdo->prepare("SELECT txids FROM responses WHERE order_id = ?");
@@ -506,20 +552,20 @@ class processModel extends App {
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 		return $row['txids'];
 	}
-
+*/
 	function updateResponseTX($response){
 		
-		
+		/*
 		//Add to list of txns
 		$responseTXIDS = $this->getRespsonseTXIDS($response->order_id);		
 		$responseTXIDS = explode(",",$responseTXIDS);		
 		$responseTXIDS[] = $response->txid;
 		$responseTXIDS = implode(",",$responseTXIDS);
-		
-		
+		*/
+		//	txids=:txids,
 		$query='UPDATE responses SET 
 			txid=:txid,
-			txids=:txids,
+		
 			time_utc=:time_utc,
 			t_block_height=:t_block_height
 			WHERE order_id=:order_id';	
@@ -527,7 +573,7 @@ class processModel extends App {
 		$stmt=$this->pdo->prepare($query);
 		$stmt->execute(array(
 			':txid'=>$response->txid,
-			':txids'=>$responseTXIDS,
+		//	':txids'=>$responseTXIDS,
 			':time_utc'=>$response->time_utc,
 			':t_block_height'=>$response->t_block_height,
 			':order_id'=>$response->order_id));				
@@ -556,12 +602,12 @@ class processModel extends App {
 			$this->updateResponseTX($response);
 			return true;
 		}
-		
+		//txids,
 		//No record, insert one.
 		$query='INSERT INTO responses (
 			order_id,
 			txid,
-			txids,
+			
 			type,
 			buyer_address,
 			out_amount,
@@ -576,13 +622,13 @@ class processModel extends App {
 			t_block_height
 			)
 			VALUES
-			(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+			(?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 			';	
 		
 		$array=array(
 			$response->order_id,
 			$response->txid,
-			$response->txid,
+			//$response->txid,
 			$response->type,
 			$response->buyer_address,
 			$response->out_amount,
