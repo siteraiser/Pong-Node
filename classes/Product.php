@@ -4,7 +4,7 @@ class Product extends App {
 	function add(){
 		$this->loadModel("productModel");
 		$this->loadModel("addProductModel");
-		$this->loadModel("deroApiModel");
+		$this->loadModel("walletApiModel");
 		$this->loadModel("webApiModel");
 		$errors=[];
 
@@ -22,7 +22,7 @@ class Product extends App {
 			}
 			//Generate integrated address
 			if(empty($errors)){	
-				$export_address_result = json_decode($this->deroApiModel->makeIntegratedAddress($_POST['port'],$_POST['comment'],$_POST['ask_amount']));
+				$export_address_result = json_decode($this->walletApiModel->makeIntegratedAddress($_POST['port'],$_POST['comment'],$_POST['ask_amount']));
 				if($export_address_result ==''){			
 					$errors[] = "Couldn't generate integrated address";
 				}
@@ -78,7 +78,7 @@ class Product extends App {
 	function edit(){
 		$this->loadModel("productModel");
 		$this->loadModel("editProductModel");
-		$this->loadModel("deroApiModel");
+		$this->loadModel("walletApiModel");
 		$this->loadModel("webApiModel");
 
 		
@@ -104,7 +104,7 @@ echo'</pre>';
 			//Generate integrated address
 			if(empty($errors)){	
 				
-				$export_address_result = json_decode($this->deroApiModel->makeIntegratedAddress($_POST['port'],$_POST['comment'],$_POST['ask_amount']));
+				$export_address_result = json_decode($this->walletApiModel->makeIntegratedAddress($_POST['port'],$_POST['comment'],$_POST['ask_amount']));
 				if($export_address_result ==''){			
 					$errors[] = "Couldn't generate integrated address";
 				}else{
