@@ -3,12 +3,12 @@ class Loadout extends App {
 	function load(){
 		
 		$this->loadModel('loadoutModel');
-		$this->loadModel("deroApiModel");
+		$this->loadModel("walletApiModel");
 		$this->loadoutModel->setInstalledTime();
 		
 		$transactions = $this->loadoutModel->getTransactionList();		
 
-		$export_transfers_result = $this->deroApiModel->getTransfers();
+		$export_transfers_result = $this->walletApiModel->getInTransfers($this->loadoutModel->start_block);
 		$export_transfers_result = json_decode($export_transfers_result);
 		if($export_transfers_result === NULL){
 			$errors[] = "Wallet Connection Error.";
