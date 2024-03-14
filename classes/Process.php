@@ -67,8 +67,7 @@ class Process extends App {
 		//Save start variables about installation
 		$this->processModel->setInstanceVars();
 		
-		//Still need to check if all adds up before check-in 
-		$this->sendCheckin();
+
 		
 		
 		
@@ -177,7 +176,7 @@ class Process extends App {
 		/******************************/
 		$address_submission_candidates=[];
 		//Get transfers and save them if they are new and later than the db creation time.	
-		$export_transfers_result = $this->walletApiModel->getInTransfers($this->processModel->last_synced_block);
+		$export_transfers_result = $this->walletApiModel->getInTransfers($this->processModel->last_incoming_block);
 
 	//	$export_transfers_result =file_get_contents('testjson.json');
 		
@@ -249,7 +248,17 @@ class Process extends App {
 			}				
 		}
 
-			
+	
+
+
+
+		//Seems like a good time to test the tx list, after saving the incoming transactions it is safe to update the last synced block. 
+		$this->sendCheckin();
+
+
+
+
+	
 
 		//Make array of unprocessed transactions
 		$not_processed=[];
