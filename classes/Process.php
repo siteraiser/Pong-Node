@@ -3,10 +3,10 @@ class Process extends App {
 	public $messages=[];
 	public $errors=[];
 	public $product_changes = false;
-	
+
 	function sendCheckin(){
 		//Check to make sure there aren't any missing transfers.
-		$last_synced_block = $this->processModel->getLastSyncedBlock();
+		$last_synced_block = $this->processModel->last_synced_block;
 		//Get the new transactions, exclude the last synced block
 		$transfers_result = $this->walletApiModel->getAllTransfers($last_synced_block + 1);
 		$transfers_result = json_decode($transfers_result);
@@ -65,7 +65,7 @@ class Process extends App {
 		$this->webApiModel->tryPending();
 		
 		//Save start variables about installation
-		$this->processModel->setInstalledTime();
+		$this->processModel->setInstanceVars();
 		
 		//Still need to check if all adds up before check-in 
 		$this->sendCheckin();
@@ -177,7 +177,7 @@ class Process extends App {
 		/******************************/
 		$address_submission_candidates=[];
 		//Get transfers and save them if they are new and later than the db creation time.	
-		$export_transfers_result = $this->walletApiModel->getInTransfers($this->processModel->start_block);
+		$export_transfers_result = $this->walletApiModel->getInTransfers($this->processModel->last_synced_block);
 
 	//	$export_transfers_result =file_get_contents('testjson.json');
 		
