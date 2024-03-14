@@ -17,7 +17,7 @@ class processModel extends App {
 			$this->$name = $row['value'];
 		}
 	}
-	
+/*	
 	function getLastSyncedBlock(){
 
 		$stmt=$this->pdo->prepare("SELECT value FROM settings WHERE name = 'last_synced_block'");
@@ -28,7 +28,7 @@ class processModel extends App {
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 		return $row['value'];
 	}
-	
+*/	
 	function getLastSyncedBalance(){
 
 		$stmt=$this->pdo->prepare("SELECT value FROM settings WHERE name = 'last_synced_balance'");
