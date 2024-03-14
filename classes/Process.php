@@ -249,7 +249,7 @@ class Process extends App {
 
 
 
-		//Seems like a good time to test the tx list, after saving the incoming transactions it is safe to update the last synced block. 
+		//Seems like a good time to test the tx list, after saving the incoming transactions it is safe to update the last synced block. (could keep them separately also) 
 		$this->sendCheckin();
 
 
