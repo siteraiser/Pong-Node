@@ -2,21 +2,19 @@
 class processModel extends App {  
 	public $installed_time_utc='';
 	public $start_block='';
+	public $last_synced_block='';
+	
+	function setInstanceVars(){
 
-	function setInstalledTime(){
-
-		$stmt=$this->pdo->prepare("SELECT name,value FROM settings WHERE name = 'install_time_utc' OR name = 'start_block'");
+		$stmt=$this->pdo->prepare("SELECT name,value FROM settings WHERE name = 'install_time_utc' OR name = 'start_block' OR name = 'last_synced_block'");
 		$stmt->execute([]);		
 		if($stmt->rowCount()==0){
 			return false;
 		}
 		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);	
 		foreach($rows as $row){
-			if($row['name']=='install_time_utc'){
-				$this->installed_time_utc = $row['value'];
-			}else{
-				$this->start_block = $row['value'];
-			}	
+			$name = $row['name'];
+			$this->$name = $row['value'];
 		}
 	}
 	
