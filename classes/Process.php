@@ -68,9 +68,6 @@ class Process extends App {
 		$this->processModel->setInstanceVars();
 		
 
-		
-		
-		
 		/*******************************/
 		/** Check if pending response **/
 		/** transfers have confirmed  **/
@@ -176,7 +173,7 @@ class Process extends App {
 		/******************************/
 		$address_submission_candidates=[];
 		//Get transfers and save them if they are new and later than the db creation time.	
-		$export_transfers_result = $this->walletApiModel->getInTransfers($this->processModel->last_incoming_block);
+		$export_transfers_result = $this->walletApiModel->getInTransfers($this->processModel->last_synced_block);
 
 	//	$export_transfers_result =file_get_contents('testjson.json');
 		
