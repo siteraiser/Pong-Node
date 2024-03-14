@@ -250,7 +250,7 @@ class Process extends App {
 
 
 		//Seems like a good time to test the tx list, after saving the incoming transactions it is safe to update the last synced block. (could keep them separately also) 
-		//The errors at this point are enough to delist, maybe create error levels and delist according to that checkin can be done at the end.
+		//The errors at this point are enough to delist, maybe create error levels and delist according to that so checkin can be done at the end or anywhere.
 		//Token send failures are handled automatically and shouldn't stop check-ins
 		$this->sendCheckin();
 
