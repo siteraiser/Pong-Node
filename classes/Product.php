@@ -13,13 +13,16 @@ class Product extends App {
 
 
 		if(!empty($_POST)){
-			if($_POST['p_type']=='' || $_POST['comment']=='' ||  $_POST['ask_amount'] == '' || $_POST['ask_amount'] < 1 || $_POST['port'] ==  '' ){		
-				if($_POST['ask_amount'] < 1){
-					$errors[] = "Minumum Ask Amount is 1";
-				}else{
-					$errors[] = "Required fields missing";
-				}
+			if($_POST['p_type']=='' || $_POST['comment']=='' ||  $_POST['ask_amount'] == '' || $_POST['port'] ==  '' ){		
+				$errors[] = "Required fields missing";
 			}
+			if($_POST['ask_amount'] < 1){
+					$errors[] = "Minumum Ask Amount is 1";
+			}
+			if($_POST['inventory'] > 1 && $_POST['p_type']=='smartcontract'){
+				$errors[] = "Max inventory for Smart Contract Ownership Sales is 1.";
+			}	
+			
 			//Generate integrated address
 			if(empty($errors)){	
 				$export_address_result = json_decode($this->walletApiModel->makeIntegratedAddress($_POST['port'],$_POST['comment'],$_POST['ask_amount']));
@@ -92,13 +95,28 @@ var_dump($_POST['image']);
 echo'</pre>';
 */
 		if(!empty($_POST)){			
-			if($_POST['p_type']=='' || $_POST['comment']=='' || $_POST['ask_amount'] ==  '' || $_POST['ask_amount'] < 1 || $_POST['port'] ==  '' ){		
-				if($_POST['ask_amount'] < 1){
+			if($_POST['p_type']=='' || $_POST['comment']=='' ||  $_POST['ask_amount'] == '' || $_POST['port'] ==  '' ){		
+				$errors[] = "Required fields missing";
+			}
+			if($_POST['ask_amount'] < 1){
 					$errors[] = "Minumum Ask Amount is 1";
-				}else{
-					$errors[] = "Required fields missing";
+			}
+			
+			
+			if($_POST['p_type']=='smartcontract'){
+				$max_inv_error = false;
+				
+				foreach($_POST['ia_inventory'] as $iivalue){
+					if($iivalue > 1){
+						$max_inv_error = true;
+					}
 				}
-			}			
+				if($max_inv_error || $_POST['inventory'] > 1 ){
+					$errors[] = "Max inventory for Smart Contract Ownership Sales is 1.";
+				}
+			}		
+			
+			
 			$ia = '';
 			$same_ia = $this->editProductModel->sameIntegratedAddress();//no changes to comment, amount or port and is same product id (no need to generate a new one...)
 			//Generate integrated address
