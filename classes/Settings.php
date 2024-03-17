@@ -23,7 +23,7 @@ class Settings extends App {
 							$_POST['web_api_user'] = '';
 						}
 					}
-				}else{
+				}else if(isset($address->status)){
 					$_POST['web_api_user'] = '';
 				}				
 			}
