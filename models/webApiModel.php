@@ -195,7 +195,8 @@ class webApiModel extends App{
 		$data = '{
 			"method": "newTX",
 			"params": {
-				"uuid": "'.$tx['uuid'].'"
+				"uuid": "'.$tx['uuid'].'",
+				"ia_id": "'.$tx['for_ia_id'].'"
 			}
 		}';
 
