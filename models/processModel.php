@@ -480,6 +480,8 @@ class processModel extends App {
 	function unConfirmedResponses(){
 		//$stmt=$this->pdo->prepare("SELECT txid,time_utc,t_block_height FROM responses WHERE confirmed = '0'");
 		//$stmt=$this->pdo->prepare("SELECT DISTINCT txid,txids,time_utc,t_block_height FROM responses WHERE confirmed = '0'");
+		//Reduce the chance of 2 scripts running at once and causing double responses by setting order to pending twice. 
+		//Only check orders that are set as confirmed, pending orders are retried. 
 		$stmt=$this->pdo->prepare("
 			SELECT txid,time_utc,t_block_height FROM responses 
 			JOIN orders ON orders.id = responses.order_id 
