@@ -57,7 +57,7 @@ class processModel extends App {
 		}
 		return true;	
 	}
-	
+
 	function nextCheckInTime(){
 		
 		$given = new DateTime();
@@ -478,8 +478,16 @@ class processModel extends App {
 
 	//check responses to ensure they went through, if not mark as not processed 
 	function unConfirmedResponses(){
-		$stmt=$this->pdo->prepare("SELECT txid,time_utc,t_block_height FROM responses WHERE confirmed = '0'");
+		//$stmt=$this->pdo->prepare("SELECT txid,time_utc,t_block_height FROM responses WHERE confirmed = '0'");
 		//$stmt=$this->pdo->prepare("SELECT DISTINCT txid,txids,time_utc,t_block_height FROM responses WHERE confirmed = '0'");
+		$stmt=$this->pdo->prepare("
+			SELECT txid,time_utc,t_block_height FROM responses 
+			JOIN orders ON orders.id = responses.order_id 
+			WHERE responses.confirmed = '0' AND orders.order_status = 'confirmed'
+		");
+		
+		
+		
 		$stmt->execute([]);		
 		if($stmt->rowCount()==0){
 			return [];
