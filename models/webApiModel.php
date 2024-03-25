@@ -82,6 +82,7 @@ class webApiModel extends App{
 	}
 	
 	function deleteRequests($method,$applicable_id){
+		if($method == 'newTX'){return}
 		$stmt=$this->pdo->prepare("DELETE FROM pending WHERE method = ? AND aid=?");
 		$stmt->execute([$method,$applicable_id]);	
 	}
@@ -230,6 +231,8 @@ class webApiModel extends App{
 		}else{
 			$error = 'No Response';
 		}
+		
+		//newTXs are not deleted (will need to be updated if name changes)
 		$this->logRequest($url,$json,$error,'newTX','');
 		
 		return $output;
