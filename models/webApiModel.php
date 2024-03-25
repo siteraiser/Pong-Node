@@ -165,10 +165,13 @@ class webApiModel extends App{
 		$output = curl_exec($ch);
 		
 		$error = $this->connectionErrors($ch);
-
+//var_dump($output);
 		curl_close($ch);
 		
 		$jresult = json_decode($output);
+		
+		
+		
 		if($output!='' && $jresult != ''){
 			
 			if($jresult->success != true && $error ==''){
@@ -196,7 +199,7 @@ class webApiModel extends App{
 			"method": "newTX",
 			"params": {
 				"uuid": "'.$tx['uuid'].'",
-				"ia_id": "'.$tx['for_ia_id'].'"
+				"ia_id": '.(int)$tx['for_ia_id'].'
 			}
 		}';
 
@@ -294,7 +297,7 @@ class webApiModel extends App{
 		$data["method"] = "submitProduct";
 		
 		$params=[];
-		$params["id"] = $product_id;
+		$params["id"] = (int)$product_id;
 		$params["action"] = 'delete';
 		
 		$data["params"] = (object)$params;
@@ -388,7 +391,7 @@ class webApiModel extends App{
 		$data["method"] = "submitIAddress";
 		//this is goofy... but tested lols
 		$params=[];
-		$params["id"] = $i_address_id;	
+		$params["id"] = (int)$i_address_id;	
 		$params["action"] = 'delete';	
 		
 		$data["params"] = (object)$params;
